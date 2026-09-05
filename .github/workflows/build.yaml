@@ -106,27 +106,31 @@ jobs:
           sudo apt-get install -y libasound2-dev libflac-dev libvorbis-dev libogg-dev libmpg123-dev
           go build -o /tmp/cliamp-sanity-check .
 
-      - name: Add arm64 architecture + cross toolchain + arm64 audio/codec dev libs
-        run: |
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y \
-            gcc-aarch64-linux-gnu \
-            libasound2-dev:arm64 \
-            libflac-dev:arm64 \
-            libvorbis-dev:arm64 \
-            libogg-dev:arm64 \
-            libmpg123-dev:arm64
+      # GitHub's ubuntu-latest runners use azure.archive.ubuntu.com /
+      # security.ubuntu.com mirrors, which do NOT host arm64 packages
+      # (those only live on ports.ubuntu.com). Rather than hand-patch
+      # sources.list, we build inside a real arm64 container via QEMU,
+      # where every package is native arm64 and no multiarch dance is
+      # needed at all.
+      - name: Set up QEMU (arm64)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
-      - name: Cross-compile for linux/arm64 (Termux)
-        working-directory: cliamp
-        env:
-          GOOS: linux
-          GOARCH: arm64
-          CGO_ENABLED: "1"
-          CC: aarch64-linux-gnu-gcc
-          PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
-        run: go build -trimpath -ldflags="-s -w" -o cliamp-linux-arm64-nospotify .
+      - name: Cross-compile for linux/arm64 (Termux) inside arm64 container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}/cliamp:/src" \
+            -w /src \
+            golang:1.25-bookworm \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                libasound2-dev libflac-dev libvorbis-dev libogg-dev libmpg123-dev
+              CGO_ENABLED=1 GOOS=linux GOARCH=arm64 \
+                go build -trimpath -ldflags='-s -w' -o cliamp-linux-arm64-nospotify .
+            "
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
