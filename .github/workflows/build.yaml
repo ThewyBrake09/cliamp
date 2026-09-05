@@ -1,28 +1,79 @@
-name: Build Cliamp for ARM64
+name: Build cliamp for Termux (Android arm64)
 
 on:
   workflow_dispatch:
+    inputs:
+      cliamp_ref:
+        description: "Branch/tag/commit cliamp yang mau di-build"
+        required: false
+        default: "main"
 
 jobs:
-  build:
+  build-android-arm64:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Go and Build
-        run: |
-          # 1. Instal Go langsung dari repository Ubuntu
-          sudo apt-get update
-          sudo apt-get install -y golang-go
-          
-          # 2. Clone repository asli cliamp
-          git clone https://github.com/bjarneo/cliamp.git
-          cd cliamp
-          
-          # 3. Kompilasi biner khusus arm64 untuk Termux
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ../cliamp-arm64
-          
-      - name: Upload Artifact
+      - name: Checkout cliamp
+        uses: actions/checkout@v4
+        with:
+          repository: bjarneo/cliamp
+          ref: ${{ github.event.inputs.cliamp_ref }}
+          path: cliamp
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.5"
+
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+
+      - name: Build (cgo, android/arm64, via NDK)
+        working-directory: cliamp
+        env:
+          GOOS: android
+          GOARCH: arm64
+          CGO_ENABLED: "1"
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
+        run: go build -trimpath -ldflags="-s -w" -o cliamp-android-arm64 .
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cliamp-binary-arm64
-          path: cliamp-arm64
+          name: cliamp-android-arm64
+          path: cliamp/cliamp-android-arm64
+
+  # Fallback tanpa cgo, kalau job di atas gagal karena dependency yang
+  # belum support cross-compile ke android. Audio backend kemungkinan
+  # tidak berfungsi penuh di build ini, tapi berguna untuk cek TUI-nya jalan.
+  build-linux-arm64-nocgo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cliamp
+        uses: actions/checkout@v4
+        with:
+          repository: bjarneo/cliamp
+          ref: ${{ github.event.inputs.cliamp_ref }}
+          path: cliamp
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.5"
+
+      - name: Build (no cgo, linux/arm64)
+        working-directory: cliamp
+        env:
+          GOOS: linux
+          GOARCH: arm64
+          CGO_ENABLED: "0"
+        run: go build -trimpath -ldflags="-s -w" -o cliamp-linux-arm64-nocgo .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cliamp-linux-arm64-nocgo
+          path: cliamp/cliamp-linux-arm64-nocgo
           
