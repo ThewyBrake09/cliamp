@@ -1,0 +1,33 @@
+name: Build Cliamp for ARM64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build Cliamp Binary
+        run: |
+          # Mengklona repositori resmi cliamp
+          git clone https://github.com/bjarneo/cliamp.git
+          cd cliamp
+
+          # Kompilasi silang (cross-compile) untuk arsitektur arm64
+          # Mengaktifkan CGO jika diperlukan, atau build murni statis
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ../cliamp-arm64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cliamp-binary-arm64
+          path: cliamp-arm64
+          
