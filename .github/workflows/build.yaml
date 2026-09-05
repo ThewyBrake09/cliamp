@@ -7,16 +7,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Cliamp Repository
+        uses: actions/checkout@v4
+        with:
+          repository: bjarneo/cliamp
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
-      - name: Clone and Build Cliamp
+      - name: Build Cliamp
         run: |
-          git clone https://github.com/bjarneo/cliamp.git
-          cd cliamp
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ../cliamp-arm64
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o cliamp-arm64
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
