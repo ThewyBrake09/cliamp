@@ -7,19 +7,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Cliamp Repository
-        uses: actions/checkout@v4
-        with:
-          repository: bjarneo/cliamp
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
-      - name: Build Cliamp
+      - name: Clone Repo and Build
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o cliamp-arm64
+          # 1. Download dan instal Go secara manual via shell
+          wget https://golang.org/dl/go1.22.5.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.22.5.linux-amd64.tar.gz
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+          
+          # 2. Clone repository asli cliamp
+          git clone https://github.com/bjarneo/cliamp.git
+          cd cliamp
+          
+          # 3. Kompilasi biner khusus arm64
+          export PATH=$PATH:/usr/local/go/bin
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ../cliamp-arm64
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
