@@ -1,4 +1,4 @@
-name: Build cliamp (no-Spotify) for Termux (linux/arm64)
+name: cliamp custom lib for Debian (linux/arm64)
 
 on:
   workflow_dispatch:
