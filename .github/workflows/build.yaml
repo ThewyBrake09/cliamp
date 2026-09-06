@@ -122,7 +122,7 @@ jobs:
           docker run --rm --platform linux/arm64 \
             -v "${{ github.workspace }}/cliamp:/src" \
             -w /src \
-            golang:1.25-bookworm \
+            golang:1.25-trixie \
             bash -c "
               set -e
               apt-get update
