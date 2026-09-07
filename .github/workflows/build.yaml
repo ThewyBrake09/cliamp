@@ -1,15 +1,24 @@
-name: cliamp custom lib for Debian (linux/arm64)
+# EXPERIMENTAL: builds bjarneo/cliamp for linux/arm64 WITHOUT removing
+# Spotify support, to test whether go-librespot's build constraint only
+# excludes GOOS=android specifically (as suspected) rather than being
+# broken on linux/arm64 in general. If this succeeds, the Spotify
+# provider should work like any other cliamp feature under proot-distro
+# (its actual login/auth flow is untested separately from this).
+#
+# See build-cliamp-nospotify-termux.yml for the "known good" variant
+# with Spotify removed, and README.md for background.
+name: Build cliampfor Termux (linux/arm64) [experimental]
 
 on:
   workflow_dispatch:
     inputs:
       cliamp_ref:
-        description: "Branch/tag/commit cliamp yang mau di-build"
+        description: "cliamp branch/tag/commit to build"
         required: false
         default: "main"
 
 jobs:
-  build-linux-arm64:
+  build-linux-arm64-with-spotify:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout cliamp
@@ -19,105 +28,12 @@ jobs:
           ref: ${{ github.event.inputs.cliamp_ref }}
           path: cliamp
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25.5"
-
-      - name: Patch out Spotify (go-librespot) support
-        working-directory: cliamp
-        run: |
-          python3 - <<'PYEOF'
-          import re
-
-          path = "main.go"
-          with open(path, "r") as f:
-              src = f.read()
-
-          def remove_balanced_block(text, start_pattern):
-              m = re.search(start_pattern, text)
-              if not m:
-                  return text, False
-              start = m.start()
-              brace_open = text.index("{", start)
-              depth = 0
-              i = brace_open
-              while i < len(text):
-                  if text[i] == "{":
-                      depth += 1
-                  elif text[i] == "}":
-                      depth -= 1
-                      if depth == 0:
-                          break
-                  i += 1
-              end = i + 1
-              return text[:start] + text[end:], True
-
-          # 1) Drop the import line
-          src, n = re.subn(
-              r'[ \t]*"github\.com/bjarneo/cliamp/external/spotify"\s*\n', "", src
-          )
-          print(f"removed import lines: {n}")
-
-          # 2) Drop the "var spotifyProv *spotify.SpotifyProvider" declaration
-          src, n = re.subn(
-              r'[ \t]*var spotifyProv \*spotify\.SpotifyProvider\s*\n', "", src
-          )
-          print(f"removed var decl lines: {n}")
-
-          # 3) Drop the whole "if cfg.Spotify.IsSet() { ... }" block
-          #    (this also removes the nested "if spotifyProv != nil {...}" inside it)
-          src, did = remove_balanced_block(src, r"if cfg\.Spotify\.IsSet\(\)\s*\{")
-          print(f"removed cfg.Spotify.IsSet block: {did}")
-
-          # 4) Drop every remaining "if spotifyProv != nil { ... }" block
-          #    (defer Close, RegisterStreamerFactory, SetAuthURLObserver)
-          removed = 0
-          while True:
-              src, did = remove_balanced_block(src, r"if spotifyProv != nil\s*\{")
-              if not did:
-                  break
-              removed += 1
-          print(f"removed spotifyProv-guarded blocks: {removed}")
-
-          if "spotifyProv" in src or '"github.com/bjarneo/cliamp/external/spotify"' in src:
-              raise SystemExit(
-                  "Patch incomplete: 'spotifyProv' or the spotify import is still "
-                  "present in main.go. Upstream source likely changed shape; "
-                  "inspect main.go manually before continuing."
-              )
-
-          with open(path, "w") as f:
-              f.write(src)
-
-          print("Patch applied cleanly.")
-          PYEOF
-
-      - name: Show patched main.go for review
-        working-directory: cliamp
-        run: gofmt -l . ; git diff -- main.go
-
-      - name: Verify it still builds for host (linux/amd64) after patch
-        working-directory: cliamp
-        env:
-          CGO_ENABLED: "1"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libasound2-dev libflac-dev libvorbis-dev libogg-dev libmpg123-dev
-          go build -o /tmp/cliamp-sanity-check .
-
-      # GitHub's ubuntu-latest runners use azure.archive.ubuntu.com /
-      # security.ubuntu.com mirrors, which do NOT host arm64 packages
-      # (those only live on ports.ubuntu.com). Rather than hand-patch
-      # sources.list, we build inside a real arm64 container via QEMU,
-      # where every package is native arm64 and no multiarch dance is
-      # needed at all.
       - name: Set up QEMU (arm64)
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
 
-      - name: Cross-compile for linux/arm64 (Termux) inside arm64 container
+      - name: Cross-compile for linux/arm64 inside arm64 container (Spotify included)
         run: |
           docker run --rm --platform linux/arm64 \
             -v "${{ github.workspace }}/cliamp:/src" \
@@ -130,12 +46,12 @@ jobs:
                 libasound2-dev libflac-dev libvorbis-dev libogg-dev libmpg123-dev
               export GOTOOLCHAIN=auto
               CGO_ENABLED=1 GOOS=linux GOARCH=arm64 \
-                go build -buildvcs=false -trimpath -ldflags='-s -w' -o cliamp-linux-arm64-nospotify .
+                go build -buildvcs=false -trimpath -ldflags='-s -w' -o cliamp-linux-arm64-with-spotify .
             "
 
-      - name: Upload artifact
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cliamp-linux-arm64-nospotify
-          path: cliamp/cliamp-linux-arm64-nospotify
+          name: cliamp-linux-arm64-with-spotify
+          path: cliamp/cliamp-linux-arm64-with-spotify
           
