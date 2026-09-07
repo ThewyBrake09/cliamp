@@ -7,7 +7,7 @@
 #
 # See build-cliamp-nospotify-termux.yml for the "known good" variant
 # with Spotify removed, and README.md for background.
-name: Build cliampfor Termux (linux/arm64) [experimental]
+name: Build cliamp Android Native (linux/arm64) [experimental]
 
 on:
   workflow_dispatch:
