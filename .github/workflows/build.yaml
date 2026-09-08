@@ -1,107 +1,37 @@
-name: Inspect embedded lyrics + Build cliamp ARM64
+name: Build cliamp ARM64
 
 on:
   workflow_dispatch:
     inputs:
       cliamp_ref:
-        description: "cliamp branch/tag/commit to build"
-        required: false
-        default: "main"
+        description: "Test"
+        required: true
+        default: main
 
 jobs:
-  build-linux-arm64-with-spotify:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout cliamp
         uses: actions/checkout@v4
         with:
-          repository: bjarneo/cliamp
+          repository: ThewyBrake09/cliamp-termux
           ref: ${{ github.event.inputs.cliamp_ref }}
           path: cliamp
 
-      - name: Inspect source revision
+      - name: Verify source repository
         working-directory: cliamp
         run: |
+          echo "=== SOURCE REPOSITORY ==="
+          git remote -v
+
+          echo
           echo "=== SOURCE REVISION ==="
           git log -1 --oneline
           git rev-parse HEAD
-          echo
 
-          echo "=== GO MODULE ==="
-          go version
-          grep '^module ' go.mod || true
-          grep 'github.com/dhowden/tag' go.mod || true
-          echo
-
-      - name: Inspect embedded lyrics implementation
-        working-directory: cliamp
-        run: |
-          set +e
-
-          OUT="../embedded-lyrics-inspection.txt"
-          : > "$OUT"
-
-          echo "==================================================" >> "$OUT"
-          echo "CLIAMP EMBEDDED LYRICS SOURCE INSPECTION" >> "$OUT"
-          echo "==================================================" >> "$OUT"
-          echo >> "$OUT"
-
-          echo "=== SOURCE REVISION ===" >> "$OUT"
-          git log -1 --oneline >> "$OUT"
-          git rev-parse HEAD >> "$OUT"
-          echo >> "$OUT"
-
-          for pattern in \
-            'EmbeddedLyrics' \
-            'ParseEmbedded' \
-            'handleLyrics' \
-            'fetchLyricsForTrack' \
-            'lyricsSyncable' \
-            '\.Lyrics' \
-            'USLT' \
-            'SYLT' \
-            'PlainLyrics' \
-            'SyncedLyrics'
-          do
-            echo >> "$OUT"
-            echo "==================================================" >> "$OUT"
-            echo "PATTERN: $pattern" >> "$OUT"
-            echo "==================================================" >> "$OUT"
-
-            grep -R -n -E -B 20 -A 20 \
-              --exclude-dir=.git \
-              --exclude='*.sum' \
-              "$pattern" . >> "$OUT" 2>&1
-          done
-
-          echo >> "$OUT"
-          echo "==================================================" >> "$OUT"
-          echo "FILES CONTAINING EMBEDDED LYRICS SYMBOLS" >> "$OUT"
-          echo "==================================================" >> "$OUT"
-
-          grep -R -l -E \
-            --exclude-dir=.git \
-            'EmbeddedLyrics|ParseEmbedded|lyricsSyncable|PlainLyrics|SyncedLyrics' \
-            . >> "$OUT" 2>&1
-
-          echo
-          echo "Inspection complete:"
-          wc -c "$OUT"
-          echo "Output: $OUT"
-
-      - name: Upload lyrics source inspection
-        uses: actions/upload-artifact@v4
-        with:
-          name: cliamp-embedded-lyrics-inspection
-          path: embedded-lyrics-inspection.txt
-
-      - name: Set up QEMU (arm64)
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Cross-compile for linux/arm64 inside arm64 container
+      - name: Build cliamp ARM64
         run: |
           docker run --rm --platform linux/arm64 \
             -v "${{ github.workspace }}/cliamp:/src" \
@@ -109,14 +39,22 @@ jobs:
             golang:1.25-trixie \
             bash -c "
               set -e
+
               apt-get update
+
               apt-get install -y --no-install-recommends \
-                libasound2-dev libflac-dev libvorbis-dev libogg-dev libmpg123-dev
+                libasound2-dev \
+                libflac-dev \
+                libvorbis-dev \
+                libogg-dev \
+                libmpg123-dev
 
               export GOTOOLCHAIN=auto
 
-              CGO_ENABLED=1 GOOS=linux GOARCH=arm64 \
-                go build \
+              CGO_ENABLED=1 \
+              GOOS=linux \
+              GOARCH=arm64 \
+              go build \
                 -buildvcs=false \
                 -trimpath \
                 -ldflags='-s -w' \
@@ -126,10 +64,18 @@ jobs:
       - name: Verify binary
         working-directory: cliamp
         run: |
+          echo "=== BINARY ==="
           ls -lh cliamp-linux-arm64-with-spotify
+
+          echo
+          echo "=== SHA256 ==="
           sha256sum cliamp-linux-arm64-with-spotify
 
-      - name: Upload binary artifact
+          echo
+          echo "=== FILE ==="
+          file cliamp-linux-arm64-with-spotify
+
+      - name: Upload ARM64 binary
         uses: actions/upload-artifact@v4
         with:
           name: cliamp-linux-arm64-with-spotify
