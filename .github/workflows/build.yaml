@@ -31,49 +31,97 @@ jobs:
           git log -1 --oneline
           git rev-parse HEAD
 
-      - name: Build cliamp ARM64
+      - name: Build cliamp ARM64 with CGO
         run: |
-          docker run --rm --platform linux/arm64 \
+          docker run --rm \
             -v "${{ github.workspace }}/cliamp:/src" \
             -w /src \
             golang:1.25-trixie \
-            bash -c "
-              set -e
+            bash -c '
+              set -eux
 
+              echo "=== HOST ==="
+              uname -m
+
+              echo
+              echo "=== ENABLE ARM64 PACKAGE ARCHITECTURE ==="
+              dpkg --add-architecture arm64
+
+              echo
+              echo "=== UPDATE PACKAGE INDEX ==="
               apt-get update
 
+              echo
+              echo "=== INSTALL ARM64 CROSS TOOLCHAIN ==="
               apt-get install -y --no-install-recommends \
-                libasound2-dev \
-                libflac-dev \
-                libvorbis-dev \
-                libogg-dev \
-                libmpg123-dev
+                gcc-aarch64-linux-gnu \
+                g++-aarch64-linux-gnu \
+                libc6-dev-arm64-cross \
+                pkg-config
+
+              echo
+              echo "=== INSTALL ARM64 AUDIO DEVELOPMENT LIBRARIES ==="
+              apt-get install -y --no-install-recommends \
+                libasound2-dev:arm64 \
+                libflac-dev:arm64 \
+                libvorbis-dev:arm64 \
+                libogg-dev:arm64 \
+                libmpg123-dev:arm64
+
+              echo
+              echo "=== CROSS COMPILER ==="
+              aarch64-linux-gnu-gcc --version
+
+              echo
+              echo "=== ARM64 LIBRARIES ==="
+              dpkg-query -W \
+                libasound2-dev:arm64 \
+                libflac-dev:arm64 \
+                libvorbis-dev:arm64 \
+                libogg-dev:arm64 \
+                libmpg123-dev:arm64
+
+              echo
+              echo "=== BUILD ARM64 ==="
 
               export GOTOOLCHAIN=auto
+              export CGO_ENABLED=1
+              export GOOS=linux
+              export GOARCH=arm64
+              export CC=aarch64-linux-gnu-gcc
+              export CXX=aarch64-linux-gnu-g++
 
-              CGO_ENABLED=1 \
-              GOOS=linux \
-              GOARCH=arm64 \
+              export PKG_CONFIG_LIBDIR="/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+              export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig"
+
+              go env GOOS GOARCH CGO_ENABLED CC CXX
+
               go build \
                 -buildvcs=false \
                 -trimpath \
-                -ldflags='-s -w' \
+                -ldflags="-s -w" \
                 -o cliamp-linux-arm64-with-spotify .
-            "
 
-      - name: Verify binary
+              echo
+              echo "=== BUILD COMPLETE ==="
+              file cliamp-linux-arm64-with-spotify
+              ls -lh cliamp-linux-arm64-with-spotify
+              sha256sum cliamp-linux-arm64-with-spotify
+            '
+
+      - name: Verify ARM64 binary
         working-directory: cliamp
         run: |
           echo "=== BINARY ==="
+          file cliamp-linux-arm64-with-spotify
+
+          echo
+          echo "=== SIZE ==="
           ls -lh cliamp-linux-arm64-with-spotify
 
           echo
           echo "=== SHA256 ==="
           sha256sum cliamp-linux-arm64-with-spotify
-
-          echo
-          echo "=== FILE ==="
-          file cliamp-linux-arm64-with-spotify
 
       - name: Upload ARM64 binary
         uses: actions/upload-artifact@v4
