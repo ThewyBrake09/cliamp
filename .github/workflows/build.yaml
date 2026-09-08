@@ -104,7 +104,6 @@ jobs:
 
               echo
               echo "=== BUILD COMPLETE ==="
-              file cliamp-linux-arm64-with-spotify
               ls -lh cliamp-linux-arm64-with-spotify
               sha256sum cliamp-linux-arm64-with-spotify
             '
@@ -112,10 +111,6 @@ jobs:
       - name: Verify ARM64 binary
         working-directory: cliamp
         run: |
-          echo "=== BINARY ==="
-          file cliamp-linux-arm64-with-spotify
-
-          echo
           echo "=== SIZE ==="
           ls -lh cliamp-linux-arm64-with-spotify
 
