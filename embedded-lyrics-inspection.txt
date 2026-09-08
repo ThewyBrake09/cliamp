@@ -1,0 +1,1811 @@
+==================================================
+CLIAMP EMBEDDED LYRICS SOURCE INSPECTION
+==================================================
+
+=== SOURCE REVISION ===
+300ec4b refactor(radio): build the default playlist from streams.m3u
+300ec4b7000b06e61a13e6265bc7b0f585ba3a4c
+
+
+==================================================
+PATTERN: EmbeddedLyrics
+==================================================
+./external/local/provider_test.go-96-	}
+./external/local/provider_test.go-97-	if strings.Contains(got, "bookmark") {
+./external/local/provider_test.go-98-		t.Fatal("false bookmark should not be written")
+./external/local/provider_test.go-99-	}
+./external/local/provider_test.go-100-}
+./external/local/provider_test.go-101-
+./external/local/provider_test.go-102-func TestWriteTrackAllFields(t *testing.T) {
+./external/local/provider_test.go-103-	var buf bytes.Buffer
+./external/local/provider_test.go-104-	writeTrack(&buf, playlist.Track{
+./external/local/provider_test.go-105-		Path:           "/music/song.flac",
+./external/local/provider_test.go-106-		Title:          "Title",
+./external/local/provider_test.go-107-		Artist:         "Artist",
+./external/local/provider_test.go-108-		Album:          "Album",
+./external/local/provider_test.go-109-		Genre:          "Rock",
+./external/local/provider_test.go-110-		Year:           2024,
+./external/local/provider_test.go-111-		TrackNumber:    3,
+./external/local/provider_test.go-112-		DurationSecs:   240,
+./external/local/provider_test.go-113-		Bookmark:       true,
+./external/local/provider_test.go-114-		Feed:           true,
+./external/local/provider_test.go-115-		Realtime:       true,
+./external/local/provider_test.go:116:		EmbeddedLyrics: "[00:01.00]Line",
+./external/local/provider_test.go-117-		AlbumArtURL:    "file:///tmp/cover.jpg",
+./external/local/provider_test.go-118-	})
+./external/local/provider_test.go-119-	got := buf.String()
+./external/local/provider_test.go-120-
+./external/local/provider_test.go-121-	for _, want := range []string{
+./external/local/provider_test.go-122-		`path = "/music/song.flac"`,
+./external/local/provider_test.go-123-		`title = "Title"`,
+./external/local/provider_test.go-124-		`artist = "Artist"`,
+./external/local/provider_test.go-125-		`album = "Album"`,
+./external/local/provider_test.go-126-		`genre = "Rock"`,
+./external/local/provider_test.go-127-		"year = 2024",
+./external/local/provider_test.go-128-		"track_number = 3",
+./external/local/provider_test.go-129-		"duration_secs = 240",
+./external/local/provider_test.go-130-		`embedded_lyrics = "[00:01.00]Line"`,
+./external/local/provider_test.go-131-		`album_art_url = "file:///tmp/cover.jpg"`,
+./external/local/provider_test.go-132-		"bookmark = true",
+./external/local/provider_test.go-133-		"feed = true",
+./external/local/provider_test.go-134-		"realtime = true",
+./external/local/provider_test.go-135-	} {
+./external/local/provider_test.go-136-		if !strings.Contains(got, want) {
+./external/local/provider_test.go-137-			t.Errorf("missing %q in output:\n%s", want, got)
+./external/local/provider_test.go-138-		}
+./external/local/provider_test.go-139-	}
+./external/local/provider_test.go-140-}
+./external/local/provider_test.go-141-
+./external/local/provider_test.go-142-// --- loadTOML round-trip ---
+./external/local/provider_test.go-143-
+./external/local/provider_test.go-144-func TestLoadTOMLRoundTrip(t *testing.T) {
+./external/local/provider_test.go-145-	p := newTestProvider(t)
+./external/local/provider_test.go-146-	os.MkdirAll(p.dir, 0o755)
+./external/local/provider_test.go-147-
+./external/local/provider_test.go-148-	tracks := []playlist.Track{
+./external/local/provider_test.go:149:		{Path: "/a.mp3", Title: "A", Artist: "Art1", Album: "Alb", Year: 2020, TrackNumber: 1, DurationSecs: 180, Bookmark: true, EmbeddedLyrics: "Line 1\nLine 2", AlbumArtURL: "file:///tmp/a.jpg"},
+./external/local/provider_test.go-150-		{Path: "/b.flac", Title: "B", Genre: "Jazz", Feed: true},
+./external/local/provider_test.go-151-	}
+./external/local/provider_test.go-152-
+./external/local/provider_test.go-153-	if err := p.savePlaylist("test", tracks); err != nil {
+./external/local/provider_test.go-154-		t.Fatalf("savePlaylist: %v", err)
+./external/local/provider_test.go-155-	}
+./external/local/provider_test.go-156-
+./external/local/provider_test.go-157-	loaded, err := p.Tracks("test")
+./external/local/provider_test.go-158-	if err != nil {
+./external/local/provider_test.go-159-		t.Fatalf("Tracks: %v", err)
+./external/local/provider_test.go-160-	}
+./external/local/provider_test.go-161-	if len(loaded) != 2 {
+./external/local/provider_test.go-162-		t.Fatalf("got %d tracks, want 2", len(loaded))
+./external/local/provider_test.go-163-	}
+./external/local/provider_test.go-164-
+./external/local/provider_test.go-165-	if loaded[0].Path != "/a.mp3" || loaded[0].Title != "A" || loaded[0].Artist != "Art1" {
+./external/local/provider_test.go-166-		t.Fatalf("track 0 mismatch: %+v", loaded[0])
+./external/local/provider_test.go-167-	}
+./external/local/provider_test.go-168-	if !loaded[0].Bookmark {
+./external/local/provider_test.go-169-		t.Fatal("track 0 should be bookmarked")
+./external/local/provider_test.go-170-	}
+./external/local/provider_test.go-171-	if loaded[0].Year != 2020 || loaded[0].TrackNumber != 1 || loaded[0].DurationSecs != 180 {
+./external/local/provider_test.go-172-		t.Fatalf("track 0 numeric fields mismatch: %+v", loaded[0])
+./external/local/provider_test.go-173-	}
+./external/local/provider_test.go:174:	if loaded[0].EmbeddedLyrics != "Line 1\nLine 2" || loaded[0].AlbumArtURL != "file:///tmp/a.jpg" {
+./external/local/provider_test.go-175-		t.Fatalf("track 0 embedded fields mismatch: %+v", loaded[0])
+./external/local/provider_test.go-176-	}
+./external/local/provider_test.go-177-
+./external/local/provider_test.go-178-	if loaded[1].Path != "/b.flac" || loaded[1].Title != "B" || loaded[1].Genre != "Jazz" {
+./external/local/provider_test.go-179-		t.Fatalf("track 1 mismatch: %+v", loaded[1])
+./external/local/provider_test.go-180-	}
+./external/local/provider_test.go-181-	if !loaded[1].Feed {
+./external/local/provider_test.go-182-		t.Fatal("track 1 should have feed=true")
+./external/local/provider_test.go-183-	}
+./external/local/provider_test.go-184-}
+./external/local/provider_test.go-185-
+./external/local/provider_test.go-186-func TestLoadTOMLComments(t *testing.T) {
+./external/local/provider_test.go-187-	p := newTestProvider(t)
+./external/local/provider_test.go-188-	os.MkdirAll(p.dir, 0o755)
+./external/local/provider_test.go-189-
+./external/local/provider_test.go-190-	content := `# This is a comment
+./external/local/provider_test.go-191-[[track]]
+./external/local/provider_test.go-192-path = "/a.mp3"
+./external/local/provider_test.go-193-title = "A"
+./external/local/provider_test.go-194-# inline comment
+--
+./external/local/provider.go-1033-		fmt.Fprintln(w, "realtime = true")
+./external/local/provider.go-1034-	}
+./external/local/provider.go-1035-	if t.Artist != "" {
+./external/local/provider.go-1036-		fmt.Fprintf(w, "artist = %q\n", t.Artist)
+./external/local/provider.go-1037-	}
+./external/local/provider.go-1038-	if t.Album != "" {
+./external/local/provider.go-1039-		fmt.Fprintf(w, "album = %q\n", t.Album)
+./external/local/provider.go-1040-	}
+./external/local/provider.go-1041-	if t.Genre != "" {
+./external/local/provider.go-1042-		fmt.Fprintf(w, "genre = %q\n", t.Genre)
+./external/local/provider.go-1043-	}
+./external/local/provider.go-1044-	if t.Year != 0 {
+./external/local/provider.go-1045-		fmt.Fprintf(w, "year = %d\n", t.Year)
+./external/local/provider.go-1046-	}
+./external/local/provider.go-1047-	if t.TrackNumber != 0 {
+./external/local/provider.go-1048-		fmt.Fprintf(w, "track_number = %d\n", t.TrackNumber)
+./external/local/provider.go-1049-	}
+./external/local/provider.go-1050-	if t.DurationSecs != 0 {
+./external/local/provider.go-1051-		fmt.Fprintf(w, "duration_secs = %d\n", t.DurationSecs)
+./external/local/provider.go-1052-	}
+./external/local/provider.go:1053:	if t.EmbeddedLyrics != "" {
+./external/local/provider.go:1054:		fmt.Fprintf(w, "embedded_lyrics = %q\n", t.EmbeddedLyrics)
+./external/local/provider.go-1055-	}
+./external/local/provider.go-1056-	if t.AlbumArtURL != "" {
+./external/local/provider.go-1057-		fmt.Fprintf(w, "album_art_url = %q\n", t.AlbumArtURL)
+./external/local/provider.go-1058-	}
+./external/local/provider.go-1059-	if t.Bookmark {
+./external/local/provider.go-1060-		fmt.Fprintln(w, "bookmark = true")
+./external/local/provider.go-1061-	}
+./external/local/provider.go-1062-}
+./external/local/provider.go-1063-
+./external/local/provider.go-1064-// parseTrackFields converts a parsed [[track]] section into a Track.
+./external/local/provider.go-1065-func parseTrackFields(f map[string]string) playlist.Track {
+./external/local/provider.go-1066-	t := playlist.Track{
+./external/local/provider.go-1067-		Path:     f["path"],
+./external/local/provider.go-1068-		Title:    f["title"],
+./external/local/provider.go-1069-		Artist:   f["artist"],
+./external/local/provider.go-1070-		Album:    f["album"],
+./external/local/provider.go-1071-		Genre:    f["genre"],
+./external/local/provider.go-1072-		Feed:     f["feed"] == "true",
+./external/local/provider.go-1073-		Realtime: f["realtime"] == "true",
+./external/local/provider.go-1074-	}
+./external/local/provider.go:1075:	t.EmbeddedLyrics = f["embedded_lyrics"]
+./external/local/provider.go-1076-	t.AlbumArtURL = f["album_art_url"]
+./external/local/provider.go-1077-	t.Stream = playlist.IsURL(t.Path)
+./external/local/provider.go-1078-	// "favorite" is the pre-rename alias for "bookmark"; prefer bookmark.
+./external/local/provider.go-1079-	bookmark, ok := f["bookmark"]
+./external/local/provider.go-1080-	if !ok {
+./external/local/provider.go-1081-		bookmark = f["favorite"]
+./external/local/provider.go-1082-	}
+./external/local/provider.go-1083-	t.Bookmark = bookmark == "true"
+./external/local/provider.go-1084-	if n, err := strconv.Atoi(f["year"]); err == nil {
+./external/local/provider.go-1085-		t.Year = n
+./external/local/provider.go-1086-	}
+./external/local/provider.go-1087-	if n, err := strconv.Atoi(f["track_number"]); err == nil {
+./external/local/provider.go-1088-		t.TrackNumber = n
+./external/local/provider.go-1089-	}
+./external/local/provider.go-1090-	if n, err := strconv.Atoi(f["duration_secs"]); err == nil {
+./external/local/provider.go-1091-		t.DurationSecs = n
+./external/local/provider.go-1092-	}
+./external/local/provider.go-1093-	return t
+./external/local/provider.go-1094-}
+./external/local/provider.go-1095-
+--
+./daemon.go-976-		tracks = append(tracks, items[0])
+./daemon.go-977-	}
+./daemon.go-978-	return tracks, nil
+./daemon.go-979-}
+./daemon.go-980-
+./daemon.go-981-func (d *daemon) provider(key string) (model.ProviderEntry, bool) {
+./daemon.go-982-	for _, entry := range d.providers {
+./daemon.go-983-		if strings.EqualFold(entry.Key, key) {
+./daemon.go-984-			return entry, true
+./daemon.go-985-		}
+./daemon.go-986-	}
+./daemon.go-987-	return model.ProviderEntry{}, false
+./daemon.go-988-}
+./daemon.go-989-
+./daemon.go-990-func (d *daemon) handleLyrics(m ipc.LyricsRequestMsg) {
+./daemon.go-991-	track, idx := d.playlist.Current()
+./daemon.go-992-	if idx < 0 {
+./daemon.go-993-		reply(m.Reply, ipc.Response{OK: false, Error: "no current track"})
+./daemon.go-994-		return
+./daemon.go-995-	}
+./daemon.go:996:	lines := lyrics.ParseEmbedded(track.EmbeddedLyrics)
+./daemon.go-997-	var err error
+./daemon.go-998-	if len(lines) == 0 {
+./daemon.go-999-		lines, err = lyrics.Fetch(track.Artist, track.Title)
+./daemon.go-1000-	}
+./daemon.go-1001-	if err != nil {
+./daemon.go-1002-		reply(m.Reply, ipc.Response{OK: false, Error: err.Error()})
+./daemon.go-1003-		return
+./daemon.go-1004-	}
+./daemon.go-1005-	items := make([]ipc.LyricLine, len(lines))
+./daemon.go-1006-	for i, line := range lines {
+./daemon.go-1007-		items[i] = ipc.LyricLine{Start: line.Start.Seconds(), Text: line.Text}
+./daemon.go-1008-	}
+./daemon.go-1009-	reply(m.Reply, ipc.Response{OK: true, Lyrics: items})
+./daemon.go-1010-}
+./daemon.go-1011-
+./daemon.go-1012-func (d *daemon) handleHistory(m ipc.HistoryRequestMsg) {
+./daemon.go-1013-	if d.historyStore == nil {
+./daemon.go-1014-		reply(m.Reply, ipc.Response{OK: true})
+./daemon.go-1015-		return
+./daemon.go-1016-	}
+--
+./ui/model/commands.go-249-// audio-file addresses load as tracks instead of being parsed as feeds.
+./ui/model/commands.go-250-func resolveURLCmd(rawURL string, autoPlay bool) tea.Cmd {
+./ui/model/commands.go-251-	return func() tea.Msg {
+./ui/model/commands.go-252-		tracks, err := resolve.URL(rawURL)
+./ui/model/commands.go-253-		if err != nil {
+./ui/model/commands.go-254-			return fmt.Errorf("resolving URL: %w", err)
+./ui/model/commands.go-255-		}
+./ui/model/commands.go-256-		return feedsLoadedMsg{tracks: tracks, urls: []string{rawURL}, autoPlay: autoPlay}
+./ui/model/commands.go-257-	}
+./ui/model/commands.go-258-}
+./ui/model/commands.go-259-
+./ui/model/commands.go-260-func fetchLyricsCmd(artist, title, query string, gen uint64) tea.Cmd {
+./ui/model/commands.go-261-	return func() tea.Msg {
+./ui/model/commands.go-262-		lines, err := lyrics.Fetch(artist, title)
+./ui/model/commands.go-263-		return lyricsLoadedMsg{lines: lines, err: err, query: query, gen: gen}
+./ui/model/commands.go-264-	}
+./ui/model/commands.go-265-}
+./ui/model/commands.go-266-
+./ui/model/commands.go-267-func fetchTrackLyricsCmd(track playlist.Track, artist, title, query string, gen uint64) tea.Cmd {
+./ui/model/commands.go-268-	return func() tea.Msg {
+./ui/model/commands.go:269:		if lines := lyrics.ParseEmbedded(track.EmbeddedLyrics); len(lines) > 0 {
+./ui/model/commands.go-270-			return lyricsLoadedMsg{lines: lines, query: query, gen: gen}
+./ui/model/commands.go-271-		}
+./ui/model/commands.go-272-		lines, err := lyrics.Fetch(artist, title)
+./ui/model/commands.go-273-		return lyricsLoadedMsg{lines: lines, err: err, query: query, gen: gen}
+./ui/model/commands.go-274-	}
+./ui/model/commands.go-275-}
+./ui/model/commands.go-276-
+./ui/model/commands.go-277-func fetchNetSearchCmd(query string, gen uint64) tea.Cmd {
+./ui/model/commands.go-278-	return func() tea.Msg {
+./ui/model/commands.go-279-		tracks, err := resolve.Remote([]string{query})
+./ui/model/commands.go-280-		return netSearchResultsMsg{tracks: tracks, err: err, query: query, gen: gen}
+./ui/model/commands.go-281-	}
+./ui/model/commands.go-282-}
+./ui/model/commands.go-283-
+./ui/model/commands.go-284-func playStreamCmd(p player.Engine, path string, knownDuration time.Duration, startAt func() time.Duration, gen uint64) tea.Cmd {
+./ui/model/commands.go-285-	return func() tea.Msg {
+./ui/model/commands.go-286-		return streamPlayedMsg{path: path, gen: gen, err: p.PlayAtForGeneration(path, knownDuration, startAt(), gen)}
+./ui/model/commands.go-287-	}
+./ui/model/commands.go-288-}
+./ui/model/commands.go-289-
+--
+./ui/model/ipc_extended.go-546-
+./ui/model/ipc_extended.go-547-func ipcPage[T any](items []T, offset, limit, max int) ([]T, int) {
+./ui/model/ipc_extended.go-548-	total := len(items)
+./ui/model/ipc_extended.go-549-	if offset < 0 || offset >= total {
+./ui/model/ipc_extended.go-550-		return nil, total
+./ui/model/ipc_extended.go-551-	}
+./ui/model/ipc_extended.go-552-	if limit <= 0 || limit > max {
+./ui/model/ipc_extended.go-553-		limit = max
+./ui/model/ipc_extended.go-554-	}
+./ui/model/ipc_extended.go-555-	end := min(total, offset+limit)
+./ui/model/ipc_extended.go-556-	return items[offset:end], total
+./ui/model/ipc_extended.go-557-}
+./ui/model/ipc_extended.go-558-
+./ui/model/ipc_extended.go-559-func (m *Model) handleIPCLyrics(request ipc.LyricsRequestMsg) tea.Cmd {
+./ui/model/ipc_extended.go-560-	track, idx := m.currentPlaybackTrack()
+./ui/model/ipc_extended.go-561-	if idx < 0 {
+./ui/model/ipc_extended.go-562-		request.Reply <- ipc.Response{OK: false, Error: "no current track"}
+./ui/model/ipc_extended.go-563-		return nil
+./ui/model/ipc_extended.go-564-	}
+./ui/model/ipc_extended.go-565-	return func() tea.Msg {
+./ui/model/ipc_extended.go:566:		lines := lyrics.ParseEmbedded(track.EmbeddedLyrics)
+./ui/model/ipc_extended.go-567-		var err error
+./ui/model/ipc_extended.go-568-		if len(lines) == 0 {
+./ui/model/ipc_extended.go-569-			lines, err = lyrics.Fetch(track.Artist, track.Title)
+./ui/model/ipc_extended.go-570-		}
+./ui/model/ipc_extended.go-571-		if err != nil {
+./ui/model/ipc_extended.go-572-			request.Reply <- ipc.Response{OK: false, Error: err.Error()}
+./ui/model/ipc_extended.go-573-			return nil
+./ui/model/ipc_extended.go-574-		}
+./ui/model/ipc_extended.go-575-		items := make([]ipc.LyricLine, len(lines))
+./ui/model/ipc_extended.go-576-		for i, line := range lines {
+./ui/model/ipc_extended.go-577-			items[i] = ipc.LyricLine{Start: line.Start.Seconds(), Text: line.Text}
+./ui/model/ipc_extended.go-578-		}
+./ui/model/ipc_extended.go-579-		request.Reply <- ipc.Response{OK: true, Lyrics: items}
+./ui/model/ipc_extended.go-580-		return nil
+./ui/model/ipc_extended.go-581-	}
+./ui/model/ipc_extended.go-582-}
+./ui/model/ipc_extended.go-583-
+./ui/model/ipc_extended.go-584-func (m *Model) handleIPCHistory(request ipc.HistoryRequestMsg) tea.Cmd {
+./ui/model/ipc_extended.go-585-	return func() tea.Msg {
+./ui/model/ipc_extended.go-586-		if m.historyStore == nil {
+--
+./ui/model/lyrics.go-12-// For streams with ICY metadata ("Artist - Song"), it parses the stream title.
+./ui/model/lyrics.go-13-// For regular tracks, it uses the track's metadata fields.
+./ui/model/lyrics.go-14-func (m *Model) lyricsArtistTitle() (artist, title string) {
+./ui/model/lyrics.go-15-	track, idx := m.currentPlaybackTrack()
+./ui/model/lyrics.go-16-	if idx < 0 {
+./ui/model/lyrics.go-17-		return "", ""
+./ui/model/lyrics.go-18-	}
+./ui/model/lyrics.go-19-	// For streams, prefer the live ICY stream title which updates per-song.
+./ui/model/lyrics.go-20-	if m.streamTitle != "" && track.Stream {
+./ui/model/lyrics.go-21-		if a, t, ok := strings.Cut(m.streamTitle, " - "); ok {
+./ui/model/lyrics.go-22-			return strings.TrimSpace(a), strings.TrimSpace(t)
+./ui/model/lyrics.go-23-		}
+./ui/model/lyrics.go-24-	}
+./ui/model/lyrics.go-25-	return track.Artist, track.Title
+./ui/model/lyrics.go-26-}
+./ui/model/lyrics.go-27-
+./ui/model/lyrics.go-28-func lyricsLookupKey(track playlist.Track, artist, title string) string {
+./ui/model/lyrics.go-29-	if artist != "" && title != "" {
+./ui/model/lyrics.go-30-		return artist + "\n" + title
+./ui/model/lyrics.go-31-	}
+./ui/model/lyrics.go:32:	if track.EmbeddedLyrics == "" {
+./ui/model/lyrics.go-33-		return ""
+./ui/model/lyrics.go-34-	}
+./ui/model/lyrics.go-35-	if track.Path != "" {
+./ui/model/lyrics.go-36-		return "embedded\n" + track.Path
+./ui/model/lyrics.go-37-	}
+./ui/model/lyrics.go-38-	if track.Title != "" {
+./ui/model/lyrics.go-39-		return "embedded\n" + track.Title
+./ui/model/lyrics.go-40-	}
+./ui/model/lyrics.go-41-	return "embedded"
+./ui/model/lyrics.go-42-}
+./ui/model/lyrics.go-43-
+./ui/model/lyrics.go-44-func (m *Model) retryLyrics() tea.Cmd {
+./ui/model/lyrics.go-45-	if m.lyrics.loading {
+./ui/model/lyrics.go-46-		return nil
+./ui/model/lyrics.go-47-	}
+./ui/model/lyrics.go-48-	track, _ := m.currentPlaybackTrack()
+./ui/model/lyrics.go-49-	artist, title := m.lyricsArtistTitle()
+./ui/model/lyrics.go-50-	q := lyricsLookupKey(track, artist, title)
+./ui/model/lyrics.go-51-	if q == "" {
+./ui/model/lyrics.go-52-		return nil
+--
+./ui/model/playback_test.go-707-		{Title: "One", Path: "one.mp3", DurationSecs: 180},
+./ui/model/playback_test.go-708-		{Title: "Two", Path: "two.mp3", DurationSecs: 180},
+./ui/model/playback_test.go-709-		{Title: "Three", Path: "three.mp3", DurationSecs: 180},
+./ui/model/playback_test.go-710-	})
+./ui/model/playback_test.go-711-	p.SetIndex(0)
+./ui/model/playback_test.go-712-
+./ui/model/playback_test.go-713-	m := Model{
+./ui/model/playback_test.go-714-		player:   player,
+./ui/model/playback_test.go-715-		playlist: p,
+./ui/model/playback_test.go-716-		vis:      ui.NewVisualizer(float64(player.SampleRate())),
+./ui/model/playback_test.go-717-	}
+./ui/model/playback_test.go-718-	m.SetVisualizer("none")
+./ui/model/playback_test.go-719-
+./ui/model/playback_test.go-720-	updated, _ := m.Update(tickMsg(time.Now()))
+./ui/model/playback_test.go-721-	m = updated.(Model)
+./ui/model/playback_test.go-722-	if got := m.playlist.Index(); got != 1 {
+./ui/model/playback_test.go-723-		t.Fatalf("playlist index = %d, want one gapless advance to index 1", got)
+./ui/model/playback_test.go-724-	}
+./ui/model/playback_test.go-725-}
+./ui/model/playback_test.go-726-
+./ui/model/playback_test.go:727:func TestBeginPlaybackTrackFetchesEmbeddedLyricsWithoutNetworkMetadata(t *testing.T) {
+./ui/model/playback_test.go-728-	m := Model{lyrics: lyricsState{visible: true}}
+./ui/model/playback_test.go:729:	track := playlist.Track{Title: "Local", EmbeddedLyrics: "Line one\nLine two"}
+./ui/model/playback_test.go-730-
+./ui/model/playback_test.go-731-	_, cmd := m.beginPlaybackTrack(track)
+./ui/model/playback_test.go-732-	if cmd == nil {
+./ui/model/playback_test.go-733-		t.Fatal("beginPlaybackTrack() command = nil, want embedded lyrics command")
+./ui/model/playback_test.go-734-	}
+./ui/model/playback_test.go-735-	if !m.lyrics.loading {
+./ui/model/playback_test.go-736-		t.Fatal("lyrics.loading = false, want true")
+./ui/model/playback_test.go-737-	}
+./ui/model/playback_test.go-738-
+./ui/model/playback_test.go-739-	msg, ok := cmd().(lyricsLoadedMsg)
+./ui/model/playback_test.go-740-	if !ok {
+./ui/model/playback_test.go-741-		t.Fatalf("lyrics command returned %T, want lyricsLoadedMsg", msg)
+./ui/model/playback_test.go-742-	}
+./ui/model/playback_test.go-743-	if msg.err != nil {
+./ui/model/playback_test.go-744-		t.Fatalf("lyrics command error = %v", msg.err)
+./ui/model/playback_test.go-745-	}
+./ui/model/playback_test.go-746-	if len(msg.lines) != 2 || msg.lines[0].Text != "Line one" || msg.lines[1].Text != "Line two" {
+./ui/model/playback_test.go-747-		t.Fatalf("lyrics lines = %+v, want embedded plain text", msg.lines)
+./ui/model/playback_test.go-748-	}
+./ui/model/playback_test.go-749-}
+./ui/model/playback_test.go-750-
+./ui/model/playback_test.go-751-func TestBeginPlaybackTrackCancelsPendingYTDLSeek(t *testing.T) {
+./ui/model/playback_test.go-752-	player := &playbackFakeEngine{}
+./ui/model/playback_test.go-753-	m := Model{player: player, playlist: playlist.New()}
+./ui/model/playback_test.go-754-	m.beginPlaybackTrack(playlist.Track{Path: "https://example.com/track", Stream: true})
+./ui/model/playback_test.go-755-	if player.cancelSeekYTDLCalls != 1 {
+./ui/model/playback_test.go-756-		t.Fatalf("CancelSeekYTDL calls = %d, want 1", player.cancelSeekYTDLCalls)
+./ui/model/playback_test.go-757-	}
+./ui/model/playback_test.go-758-}
+./ui/model/playback_test.go-759-
+./ui/model/playback_test.go-760-func TestGaplessAdvanceRefreshesLyricsAndArtwork(t *testing.T) {
+./ui/model/playback_test.go-761-	player := &playbackFakeEngine{playing: true, gaplessAdvanced: true}
+./ui/model/playback_test.go-762-	p := playlist.New()
+./ui/model/playback_test.go-763-	p.Replace([]playlist.Track{
+./ui/model/playback_test.go:764:		{Title: "Old", Artist: "Artist", Path: "old.mp3", DurationSecs: 180, EmbeddedLyrics: "old lyric", AlbumArtURL: "file:///old.jpg"},
+./ui/model/playback_test.go:765:		{Title: "New", Artist: "Artist", Path: "new.mp3", DurationSecs: 180, EmbeddedLyrics: "[00:01.00]new lyric", AlbumArtURL: "file:///new.jpg"},
+./ui/model/playback_test.go-766-	})
+./ui/model/playback_test.go-767-	p.SetIndex(0)
+./ui/model/playback_test.go-768-
+./ui/model/playback_test.go-769-	m := Model{
+./ui/model/playback_test.go-770-		player:   player,
+./ui/model/playback_test.go-771-		playlist: p,
+./ui/model/playback_test.go-772-		vis:      ui.NewVisualizer(float64(player.SampleRate())),
+./ui/model/playback_test.go-773-		lyrics: lyricsState{
+./ui/model/playback_test.go-774-			visible: true,
+./ui/model/playback_test.go-775-			query:   "Artist\nOld",
+./ui/model/playback_test.go-776-		},
+./ui/model/playback_test.go-777-	}
+./ui/model/playback_test.go-778-	m.setPlaybackTrack(p.Tracks()[0])
+./ui/model/playback_test.go-779-	m.lyrics.lines = nil
+./ui/model/playback_test.go-780-
+./ui/model/playback_test.go-781-	next, cmd := m.Update(tickMsg(time.Now()))
+./ui/model/playback_test.go-782-	m2 := next.(Model)
+./ui/model/playback_test.go-783-	if cmd == nil {
+./ui/model/playback_test.go-784-		t.Fatal("Update() command = nil, want lyric/preload/tick batch")
+./ui/model/playback_test.go-785-	}
+--
+./playlist/tags.go-25-	"jpeg": true,
+./playlist/tags.go-26-	"png":  true,
+./playlist/tags.go-27-	"gif":  true,
+./playlist/tags.go-28-	"webp": true,
+./playlist/tags.go-29-	"bmp":  true,
+./playlist/tags.go-30-	"tiff": true,
+./playlist/tags.go-31-}
+./playlist/tags.go-32-
+./playlist/tags.go-33-// RefreshEmbeddedMetadata returns track with embedded local-file lyrics and
+./playlist/tags.go-34-// album art populated from its current Path. Existing non-embedded fields are
+./playlist/tags.go-35-// preserved so saved playlist metadata and provider fields remain stable.
+./playlist/tags.go-36-func RefreshEmbeddedMetadata(track Track) Track {
+./playlist/tags.go-37-	if track.Path == "" || track.Stream || IsURL(track.Path) || strings.HasPrefix(track.Path, "ssh://") {
+./playlist/tags.go-38-		return track
+./playlist/tags.go-39-	}
+./playlist/tags.go-40-
+./playlist/tags.go-41-	fresh, ok := readTagsWithOptions(track.Path, true)
+./playlist/tags.go-42-	if !ok {
+./playlist/tags.go-43-		return track
+./playlist/tags.go-44-	}
+./playlist/tags.go:45:	track.EmbeddedLyrics = fresh.EmbeddedLyrics
+./playlist/tags.go-46-	track.AlbumArtURL = fresh.AlbumArtURL
+./playlist/tags.go-47-	return track
+./playlist/tags.go-48-}
+./playlist/tags.go-49-
+./playlist/tags.go-50-// readTags reads embedded metadata (ID3v2, Vorbis comments, MP4 atoms) from
+./playlist/tags.go-51-// a local audio file and returns a Track. Falls back to filename parsing if
+./playlist/tags.go-52-// tag reading fails or the tags contain no title.
+./playlist/tags.go-53-func readTags(path string) Track {
+./playlist/tags.go-54-	t, _ := readTagsWithOptions(path, false)
+./playlist/tags.go-55-	return t
+./playlist/tags.go-56-}
+./playlist/tags.go-57-
+./playlist/tags.go-58-func readTagsWithOptions(path string, cacheArt bool) (Track, bool) {
+./playlist/tags.go-59-	f, err := os.Open(path)
+./playlist/tags.go-60-	if err != nil {
+./playlist/tags.go-61-		return TrackFromFilename(path), false
+./playlist/tags.go-62-	}
+./playlist/tags.go-63-	defer f.Close()
+./playlist/tags.go-64-
+./playlist/tags.go-65-	m, err := tag.ReadFrom(f)
+./playlist/tags.go-66-	if err != nil || m == nil {
+./playlist/tags.go-67-		return TrackFromFilename(path), true
+./playlist/tags.go-68-	}
+./playlist/tags.go-69-
+./playlist/tags.go-70-	t := Track{
+./playlist/tags.go-71-		Path:           path,
+./playlist/tags.go:72:		EmbeddedLyrics: sanitizeTag(strings.TrimSpace(m.Lyrics())),
+./playlist/tags.go-73-	}
+./playlist/tags.go-74-	if cacheArt {
+./playlist/tags.go-75-		t.AlbumArtURL = cacheAlbumArt(m.Picture())
+./playlist/tags.go-76-	}
+./playlist/tags.go-77-	if strings.TrimSpace(m.Title()) == "" {
+./playlist/tags.go-78-		fallback := TrackFromFilename(path)
+./playlist/tags.go:79:		fallback.EmbeddedLyrics = t.EmbeddedLyrics
+./playlist/tags.go-80-		fallback.AlbumArtURL = t.AlbumArtURL
+./playlist/tags.go-81-		return fallback, true
+./playlist/tags.go-82-	}
+./playlist/tags.go-83-
+./playlist/tags.go-84-	t.Title = sanitizeTag(strings.TrimSpace(m.Title()))
+./playlist/tags.go-85-	t.Artist = sanitizeTag(strings.TrimSpace(m.Artist()))
+./playlist/tags.go-86-	t.Album = sanitizeTag(strings.TrimSpace(m.Album()))
+./playlist/tags.go-87-	t.Genre = sanitizeTag(strings.TrimSpace(m.Genre()))
+./playlist/tags.go-88-	t.Year = m.Year()
+./playlist/tags.go-89-	trackNum, _ := m.Track()
+./playlist/tags.go-90-	t.TrackNumber = trackNum
+./playlist/tags.go-91-	return t, true
+./playlist/tags.go-92-}
+./playlist/tags.go-93-
+./playlist/tags.go-94-func cacheAlbumArt(picture *tag.Picture) string {
+./playlist/tags.go-95-	if picture == nil || len(picture.Data) == 0 {
+./playlist/tags.go-96-		return ""
+./playlist/tags.go-97-	}
+./playlist/tags.go-98-	dir, err := appdir.DataDir()
+./playlist/tags.go-99-	if err != nil {
+--
+./playlist/track_test.go-128-	}
+./playlist/track_test.go-129-	oldTime := time.Now().Add(-time.Hour)
+./playlist/track_test.go-130-	if err := os.Chtimes(oldPath, oldTime, oldTime); err != nil {
+./playlist/track_test.go-131-		t.Fatalf("Chtimes old: %v", err)
+./playlist/track_test.go-132-	}
+./playlist/track_test.go-133-
+./playlist/track_test.go-134-	cleanupAlbumArtCache(dir, 100, keepPath)
+./playlist/track_test.go-135-	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+./playlist/track_test.go-136-		t.Fatalf("old cache file still exists or stat failed: %v", err)
+./playlist/track_test.go-137-	}
+./playlist/track_test.go-138-	if _, err := os.Stat(keepPath); err != nil {
+./playlist/track_test.go-139-		t.Fatalf("current cache file was removed: %v", err)
+./playlist/track_test.go-140-	}
+./playlist/track_test.go-141-}
+./playlist/track_test.go-142-
+./playlist/track_test.go-143-func TestRefreshEmbeddedMetadataPreservesSavedFieldsWhenUnreadable(t *testing.T) {
+./playlist/track_test.go-144-	track := Track{
+./playlist/track_test.go-145-		Path:           filepath.Join(t.TempDir(), "missing.mp3"),
+./playlist/track_test.go-146-		Title:          "Saved title",
+./playlist/track_test.go-147-		Artist:         "Saved artist",
+./playlist/track_test.go:148:		EmbeddedLyrics: "old lyrics",
+./playlist/track_test.go-149-		AlbumArtURL:    "file:///old.jpg",
+./playlist/track_test.go-150-	}
+./playlist/track_test.go-151-
+./playlist/track_test.go-152-	got := RefreshEmbeddedMetadata(track)
+./playlist/track_test.go:153:	if got.EmbeddedLyrics != track.EmbeddedLyrics || got.AlbumArtURL != track.AlbumArtURL {
+./playlist/track_test.go:154:		t.Fatalf("embedded metadata changed: got %q, %q want %q, %q", got.EmbeddedLyrics, got.AlbumArtURL, track.EmbeddedLyrics, track.AlbumArtURL)
+./playlist/track_test.go-155-	}
+./playlist/track_test.go-156-	if got.Title != track.Title || got.Artist != track.Artist {
+./playlist/track_test.go-157-		t.Fatalf("non-embedded fields changed: got %+v want title/artist from %+v", got, track)
+./playlist/track_test.go-158-	}
+./playlist/track_test.go-159-}
+./playlist/track_test.go-160-
+./playlist/track_test.go-161-func TestRefreshEmbeddedMetadataClearsSavedFieldsWhenTagsUnreadable(t *testing.T) {
+./playlist/track_test.go-162-	path := filepath.Join(t.TempDir(), "empty.mp3")
+./playlist/track_test.go-163-	if err := os.WriteFile(path, nil, 0o644); err != nil {
+./playlist/track_test.go-164-		t.Fatalf("WriteFile: %v", err)
+./playlist/track_test.go-165-	}
+./playlist/track_test.go-166-	track := Track{
+./playlist/track_test.go-167-		Path:           path,
+./playlist/track_test.go-168-		Title:          "Saved title",
+./playlist/track_test.go:169:		EmbeddedLyrics: "old lyrics",
+./playlist/track_test.go-170-		AlbumArtURL:    "file:///old.jpg",
+./playlist/track_test.go-171-	}
+./playlist/track_test.go-172-
+./playlist/track_test.go-173-	got := RefreshEmbeddedMetadata(track)
+./playlist/track_test.go:174:	if got.EmbeddedLyrics != "" || got.AlbumArtURL != "" {
+./playlist/track_test.go:175:		t.Fatalf("embedded metadata = %q, %q; want empty refreshed fields", got.EmbeddedLyrics, got.AlbumArtURL)
+./playlist/track_test.go-176-	}
+./playlist/track_test.go-177-	if got.Title != track.Title {
+./playlist/track_test.go-178-		t.Fatalf("title changed: got %q want %q", got.Title, track.Title)
+./playlist/track_test.go-179-	}
+./playlist/track_test.go-180-}
+./playlist/track_test.go-181-
+./playlist/track_test.go-182-func TestTrackFromURL(t *testing.T) {
+./playlist/track_test.go-183-	tests := []struct {
+./playlist/track_test.go-184-		name    string
+./playlist/track_test.go-185-		url     string
+./playlist/track_test.go-186-		wantTtl string
+./playlist/track_test.go-187-		stream  bool
+./playlist/track_test.go-188-	}{
+./playlist/track_test.go-189-		{
+./playlist/track_test.go-190-			name:    "with filename",
+./playlist/track_test.go-191-			url:     "https://example.com/music/song.mp3",
+./playlist/track_test.go-192-			wantTtl: "song",
+./playlist/track_test.go-193-			stream:  true,
+./playlist/track_test.go-194-		},
+./playlist/track_test.go-195-		{
+--
+./playlist/playlist.go-35-
+./playlist/playlist.go-36-// Track represents a single audio file or HTTP stream.
+./playlist/playlist.go-37-type Track struct {
+./playlist/playlist.go-38-	Path         string
+./playlist/playlist.go-39-	Title        string
+./playlist/playlist.go-40-	Artist       string
+./playlist/playlist.go-41-	Album        string
+./playlist/playlist.go-42-	Genre        string
+./playlist/playlist.go-43-	Year         int
+./playlist/playlist.go-44-	TrackNumber  int
+./playlist/playlist.go-45-	Stream       bool // true for HTTP/HTTPS URLs
+./playlist/playlist.go-46-	Realtime     bool // true for real-time/live streams (e.g. radio)
+./playlist/playlist.go-47-	Feed         bool // true for RSS/podcast feed URLs (resolved before playback)
+./playlist/playlist.go-48-	DurationSecs int  // known duration in seconds (0 = unknown)
+./playlist/playlist.go-49-	Bookmark     bool // user-bookmarked track
+./playlist/playlist.go-50-
+./playlist/playlist.go-51-	Unplayable bool // true when the track is known not playable in the current playback context
+./playlist/playlist.go-52-
+./playlist/playlist.go-53-	DirSourced bool // true when expanded from a [[dir]] playlist section; re-derived on load, never persisted
+./playlist/playlist.go-54-
+./playlist/playlist.go:55:	EmbeddedLyrics string // embedded lyrics from local file tags, when present
+./playlist/playlist.go-56-	AlbumArtURL    string // file:// URL for cached embedded album art, when present
+./playlist/playlist.go-57-
+./playlist/playlist.go-58-	// ProviderMeta holds provider-specific key-value pairs.
+./playlist/playlist.go-59-	// Keys are namespaced by provider, e.g. "navidrome.id", "jellyfin.id".
+./playlist/playlist.go-60-	ProviderMeta map[string]string
+./playlist/playlist.go-61-}
+./playlist/playlist.go-62-
+./playlist/playlist.go-63-// Meta returns the value for a provider-specific metadata key, or "" if unset.
+./playlist/playlist.go-64-func (t Track) Meta(key string) string {
+./playlist/playlist.go-65-	if t.ProviderMeta == nil {
+./playlist/playlist.go-66-		return ""
+./playlist/playlist.go-67-	}
+./playlist/playlist.go-68-	return t.ProviderMeta[key]
+./playlist/playlist.go-69-}
+./playlist/playlist.go-70-
+./playlist/playlist.go-71-// TotalDurationSecs sums DurationSecs across a slice of tracks, skipping
+./playlist/playlist.go-72-// entries with unknown duration (zero).
+./playlist/playlist.go-73-func TotalDurationSecs(tracks []Track) int {
+./playlist/playlist.go-74-	total := 0
+./playlist/playlist.go-75-	for _, t := range tracks {
+
+==================================================
+PATTERN: ParseEmbedded
+==================================================
+./lyrics/lyrics_test.go-63-	lines := parseLRC(lrc)
+./lyrics/lyrics_test.go-64-	if len(lines) != 1 {
+./lyrics/lyrics_test.go-65-		t.Fatalf("got %d lines, want 1 (should skip metadata tags)", len(lines))
+./lyrics/lyrics_test.go-66-	}
+./lyrics/lyrics_test.go-67-	if lines[0].Text != "Actual lyric" {
+./lyrics/lyrics_test.go-68-		t.Fatalf("Text = %q, want %q", lines[0].Text, "Actual lyric")
+./lyrics/lyrics_test.go-69-	}
+./lyrics/lyrics_test.go-70-}
+./lyrics/lyrics_test.go-71-
+./lyrics/lyrics_test.go-72-func TestParseLRCEmptyText(t *testing.T) {
+./lyrics/lyrics_test.go-73-	lrc := "[00:10.00]"
+./lyrics/lyrics_test.go-74-	lines := parseLRC(lrc)
+./lyrics/lyrics_test.go-75-	if len(lines) != 1 {
+./lyrics/lyrics_test.go-76-		t.Fatalf("got %d lines, want 1", len(lines))
+./lyrics/lyrics_test.go-77-	}
+./lyrics/lyrics_test.go-78-	if lines[0].Text != "" {
+./lyrics/lyrics_test.go-79-		t.Fatalf("Text = %q, want empty", lines[0].Text)
+./lyrics/lyrics_test.go-80-	}
+./lyrics/lyrics_test.go-81-}
+./lyrics/lyrics_test.go-82-
+./lyrics/lyrics_test.go:83:func TestParseEmbeddedPrefersSyncedLRC(t *testing.T) {
+./lyrics/lyrics_test.go:84:	lines := ParseEmbedded("[00:01.50]Hello\nplain fallback")
+./lyrics/lyrics_test.go-85-	if len(lines) != 1 {
+./lyrics/lyrics_test.go-86-		t.Fatalf("got %d lines, want 1 synced line", len(lines))
+./lyrics/lyrics_test.go-87-	}
+./lyrics/lyrics_test.go-88-	if lines[0].Start != 1500*time.Millisecond || lines[0].Text != "Hello" {
+./lyrics/lyrics_test.go-89-		t.Fatalf("line = %+v, want synced Hello at 1.5s", lines[0])
+./lyrics/lyrics_test.go-90-	}
+./lyrics/lyrics_test.go-91-}
+./lyrics/lyrics_test.go-92-
+./lyrics/lyrics_test.go:93:func TestParseEmbeddedPlainText(t *testing.T) {
+./lyrics/lyrics_test.go:94:	lines := ParseEmbedded("Line one\nLine two")
+./lyrics/lyrics_test.go-95-	if len(lines) != 2 {
+./lyrics/lyrics_test.go-96-		t.Fatalf("got %d lines, want 2", len(lines))
+./lyrics/lyrics_test.go-97-	}
+./lyrics/lyrics_test.go-98-	if lines[0].Start != 0 || lines[0].Text != "Line one" || lines[1].Text != "Line two" {
+./lyrics/lyrics_test.go-99-		t.Fatalf("lines = %+v, want plain zero-timestamp lines", lines)
+./lyrics/lyrics_test.go-100-	}
+./lyrics/lyrics_test.go-101-}
+./lyrics/lyrics_test.go-102-
+./lyrics/lyrics_test.go-103-func TestCleanQuery(t *testing.T) {
+./lyrics/lyrics_test.go-104-	tests := []struct {
+./lyrics/lyrics_test.go-105-		input, want string
+./lyrics/lyrics_test.go-106-	}{
+./lyrics/lyrics_test.go-107-		{"Artist - Song (Official Video)", "Artist - Song"},
+./lyrics/lyrics_test.go-108-		{"Song [Lyric Video]", "Song"},
+./lyrics/lyrics_test.go-109-		{"Song - Official Audio", "Song"},
+./lyrics/lyrics_test.go-110-		{"Song Official Music Video", "Song"},
+./lyrics/lyrics_test.go-111-		{"Clean Title", "Clean Title"},
+./lyrics/lyrics_test.go-112-		// Label words inside a real title must survive (regression cases).
+./lyrics/lyrics_test.go-113-		{"Videotape", "Videotape"},
+./lyrics/lyrics_test.go-114-		{"Audioslave", "Audioslave"},
+--
+./lyrics/lyrics.go-95-	query = strings.TrimSpace(query)
+./lyrics/lyrics.go-96-	if query == "" {
+./lyrics/lyrics.go-97-		query = artist + " " + title
+./lyrics/lyrics.go-98-	}
+./lyrics/lyrics.go-99-
+./lyrics/lyrics.go-100-	// Try LRCLIB first.
+./lyrics/lyrics.go-101-	lines, err := fetchLRCLIB(query)
+./lyrics/lyrics.go-102-	if err == nil && len(lines) > 0 {
+./lyrics/lyrics.go-103-		return lines, nil
+./lyrics/lyrics.go-104-	}
+./lyrics/lyrics.go-105-
+./lyrics/lyrics.go-106-	// Fallback to NetEase Cloud Music.
+./lyrics/lyrics.go-107-	lines, err = fetchNetEase(query)
+./lyrics/lyrics.go-108-	if err == nil && len(lines) > 0 {
+./lyrics/lyrics.go-109-		return lines, nil
+./lyrics/lyrics.go-110-	}
+./lyrics/lyrics.go-111-
+./lyrics/lyrics.go-112-	return nil, ErrNotFound
+./lyrics/lyrics.go-113-}
+./lyrics/lyrics.go-114-
+./lyrics/lyrics.go:115:// ParseEmbedded converts lyrics read from local file tags into display lines.
+./lyrics/lyrics.go-116-// Timestamped LRC data remains synced; plain text is returned as scrollable
+./lyrics/lyrics.go-117-// lines at timestamp 0.
+./lyrics/lyrics.go:118:func ParseEmbedded(data string) []Line {
+./lyrics/lyrics.go-119-	data = strings.TrimSpace(data)
+./lyrics/lyrics.go-120-	if data == "" {
+./lyrics/lyrics.go-121-		return nil
+./lyrics/lyrics.go-122-	}
+./lyrics/lyrics.go-123-	lines := parseLRC(data)
+./lyrics/lyrics.go-124-	if len(lines) > 0 {
+./lyrics/lyrics.go-125-		return lines
+./lyrics/lyrics.go-126-	}
+./lyrics/lyrics.go-127-	for raw := range strings.SplitSeq(data, "\n") {
+./lyrics/lyrics.go-128-		lines = append(lines, Line{Start: 0, Text: strings.TrimSpace(raw)})
+./lyrics/lyrics.go-129-	}
+./lyrics/lyrics.go-130-	return lines
+./lyrics/lyrics.go-131-}
+./lyrics/lyrics.go-132-
+./lyrics/lyrics.go-133-func fetchLRCLIB(query string) ([]Line, error) {
+./lyrics/lyrics.go-134-	searchURL := fmt.Sprintf("https://lrclib.net/api/search?q=%s", url.QueryEscape(query))
+./lyrics/lyrics.go-135-
+./lyrics/lyrics.go-136-	req, err := http.NewRequest("GET", searchURL, nil)
+./lyrics/lyrics.go-137-	if err != nil {
+./lyrics/lyrics.go-138-		return nil, err
+--
+./daemon.go-976-		tracks = append(tracks, items[0])
+./daemon.go-977-	}
+./daemon.go-978-	return tracks, nil
+./daemon.go-979-}
+./daemon.go-980-
+./daemon.go-981-func (d *daemon) provider(key string) (model.ProviderEntry, bool) {
+./daemon.go-982-	for _, entry := range d.providers {
+./daemon.go-983-		if strings.EqualFold(entry.Key, key) {
+./daemon.go-984-			return entry, true
+./daemon.go-985-		}
+./daemon.go-986-	}
+./daemon.go-987-	return model.ProviderEntry{}, false
+./daemon.go-988-}
+./daemon.go-989-
+./daemon.go-990-func (d *daemon) handleLyrics(m ipc.LyricsRequestMsg) {
+./daemon.go-991-	track, idx := d.playlist.Current()
+./daemon.go-992-	if idx < 0 {
+./daemon.go-993-		reply(m.Reply, ipc.Response{OK: false, Error: "no current track"})
+./daemon.go-994-		return
+./daemon.go-995-	}
+./daemon.go:996:	lines := lyrics.ParseEmbedded(track.EmbeddedLyrics)
+./daemon.go-997-	var err error
+./daemon.go-998-	if len(lines) == 0 {
+./daemon.go-999-		lines, err = lyrics.Fetch(track.Artist, track.Title)
+./daemon.go-1000-	}
+./daemon.go-1001-	if err != nil {
+./daemon.go-1002-		reply(m.Reply, ipc.Response{OK: false, Error: err.Error()})
+./daemon.go-1003-		return
+./daemon.go-1004-	}
+./daemon.go-1005-	items := make([]ipc.LyricLine, len(lines))
+./daemon.go-1006-	for i, line := range lines {
+./daemon.go-1007-		items[i] = ipc.LyricLine{Start: line.Start.Seconds(), Text: line.Text}
+./daemon.go-1008-	}
+./daemon.go-1009-	reply(m.Reply, ipc.Response{OK: true, Lyrics: items})
+./daemon.go-1010-}
+./daemon.go-1011-
+./daemon.go-1012-func (d *daemon) handleHistory(m ipc.HistoryRequestMsg) {
+./daemon.go-1013-	if d.historyStore == nil {
+./daemon.go-1014-		reply(m.Reply, ipc.Response{OK: true})
+./daemon.go-1015-		return
+./daemon.go-1016-	}
+--
+./ui/model/commands.go-249-// audio-file addresses load as tracks instead of being parsed as feeds.
+./ui/model/commands.go-250-func resolveURLCmd(rawURL string, autoPlay bool) tea.Cmd {
+./ui/model/commands.go-251-	return func() tea.Msg {
+./ui/model/commands.go-252-		tracks, err := resolve.URL(rawURL)
+./ui/model/commands.go-253-		if err != nil {
+./ui/model/commands.go-254-			return fmt.Errorf("resolving URL: %w", err)
+./ui/model/commands.go-255-		}
+./ui/model/commands.go-256-		return feedsLoadedMsg{tracks: tracks, urls: []string{rawURL}, autoPlay: autoPlay}
+./ui/model/commands.go-257-	}
+./ui/model/commands.go-258-}
+./ui/model/commands.go-259-
+./ui/model/commands.go-260-func fetchLyricsCmd(artist, title, query string, gen uint64) tea.Cmd {
+./ui/model/commands.go-261-	return func() tea.Msg {
+./ui/model/commands.go-262-		lines, err := lyrics.Fetch(artist, title)
+./ui/model/commands.go-263-		return lyricsLoadedMsg{lines: lines, err: err, query: query, gen: gen}
+./ui/model/commands.go-264-	}
+./ui/model/commands.go-265-}
+./ui/model/commands.go-266-
+./ui/model/commands.go-267-func fetchTrackLyricsCmd(track playlist.Track, artist, title, query string, gen uint64) tea.Cmd {
+./ui/model/commands.go-268-	return func() tea.Msg {
+./ui/model/commands.go:269:		if lines := lyrics.ParseEmbedded(track.EmbeddedLyrics); len(lines) > 0 {
+./ui/model/commands.go-270-			return lyricsLoadedMsg{lines: lines, query: query, gen: gen}
+./ui/model/commands.go-271-		}
+./ui/model/commands.go-272-		lines, err := lyrics.Fetch(artist, title)
+./ui/model/commands.go-273-		return lyricsLoadedMsg{lines: lines, err: err, query: query, gen: gen}
+./ui/model/commands.go-274-	}
+./ui/model/commands.go-275-}
+./ui/model/commands.go-276-
+./ui/model/commands.go-277-func fetchNetSearchCmd(query string, gen uint64) tea.Cmd {
+./ui/model/commands.go-278-	return func() tea.Msg {
+./ui/model/commands.go-279-		tracks, err := resolve.Remote([]string{query})
+./ui/model/commands.go-280-		return netSearchResultsMsg{tracks: tracks, err: err, query: query, gen: gen}
+./ui/model/commands.go-281-	}
+./ui/model/commands.go-282-}
+./ui/model/commands.go-283-
+./ui/model/commands.go-284-func playStreamCmd(p player.Engine, path string, knownDuration time.Duration, startAt func() time.Duration, gen uint64) tea.Cmd {
+./ui/model/commands.go-285-	return func() tea.Msg {
+./ui/model/commands.go-286-		return streamPlayedMsg{path: path, gen: gen, err: p.PlayAtForGeneration(path, knownDuration, startAt(), gen)}
+./ui/model/commands.go-287-	}
+./ui/model/commands.go-288-}
+./ui/model/commands.go-289-
+--
+./ui/model/ipc_extended.go-546-
+./ui/model/ipc_extended.go-547-func ipcPage[T any](items []T, offset, limit, max int) ([]T, int) {
+./ui/model/ipc_extended.go-548-	total := len(items)
+./ui/model/ipc_extended.go-549-	if offset < 0 || offset >= total {
+./ui/model/ipc_extended.go-550-		return nil, total
+./ui/model/ipc_extended.go-551-	}
+./ui/model/ipc_extended.go-552-	if limit <= 0 || limit > max {
+./ui/model/ipc_extended.go-553-		limit = max
+./ui/model/ipc_extended.go-554-	}
+./ui/model/ipc_extended.go-555-	end := min(total, offset+limit)
+./ui/model/ipc_extended.go-556-	return items[offset:end], total
+./ui/model/ipc_extended.go-557-}
+./ui/model/ipc_extended.go-558-
+./ui/model/ipc_extended.go-559-func (m *Model) handleIPCLyrics(request ipc.LyricsRequestMsg) tea.Cmd {
+./ui/model/ipc_extended.go-560-	track, idx := m.currentPlaybackTrack()
+./ui/model/ipc_extended.go-561-	if idx < 0 {
+./ui/model/ipc_extended.go-562-		request.Reply <- ipc.Response{OK: false, Error: "no current track"}
+./ui/model/ipc_extended.go-563-		return nil
+./ui/model/ipc_extended.go-564-	}
+./ui/model/ipc_extended.go-565-	return func() tea.Msg {
+./ui/model/ipc_extended.go:566:		lines := lyrics.ParseEmbedded(track.EmbeddedLyrics)
+./ui/model/ipc_extended.go-567-		var err error
+./ui/model/ipc_extended.go-568-		if len(lines) == 0 {
+./ui/model/ipc_extended.go-569-			lines, err = lyrics.Fetch(track.Artist, track.Title)
+./ui/model/ipc_extended.go-570-		}
+./ui/model/ipc_extended.go-571-		if err != nil {
+./ui/model/ipc_extended.go-572-			request.Reply <- ipc.Response{OK: false, Error: err.Error()}
+./ui/model/ipc_extended.go-573-			return nil
+./ui/model/ipc_extended.go-574-		}
+./ui/model/ipc_extended.go-575-		items := make([]ipc.LyricLine, len(lines))
+./ui/model/ipc_extended.go-576-		for i, line := range lines {
+./ui/model/ipc_extended.go-577-			items[i] = ipc.LyricLine{Start: line.Start.Seconds(), Text: line.Text}
+./ui/model/ipc_extended.go-578-		}
+./ui/model/ipc_extended.go-579-		request.Reply <- ipc.Response{OK: true, Lyrics: items}
+./ui/model/ipc_extended.go-580-		return nil
+./ui/model/ipc_extended.go-581-	}
+./ui/model/ipc_extended.go-582-}
+./ui/model/ipc_extended.go-583-
+./ui/model/ipc_extended.go-584-func (m *Model) handleIPCHistory(request ipc.HistoryRequestMsg) tea.Cmd {
+./ui/model/ipc_extended.go-585-	return func() tea.Msg {
+./ui/model/ipc_extended.go-586-		if m.historyStore == nil {
+
+==================================================
+PATTERN: handleLyrics
+==================================================
+./daemon.go-148-
+./daemon.go-149-// handleMessage runs only on the daemon control loop, except in focused tests
+./daemon.go-150-// that construct a daemon without a control channel.
+./daemon.go-151-func (d *daemon) handleMessage(msg any) {
+./daemon.go-152-	switch m := msg.(type) {
+./daemon.go-153-	case daemonV2ReadRequest:
+./daemon.go-154-		d.handleV2ReadRequest(m)
+./daemon.go-155-		return
+./daemon.go-156-	case daemonV2JobRequest:
+./daemon.go-157-		d.handleV2JobRequest(m)
+./daemon.go-158-		return
+./daemon.go-159-	}
+./daemon.go-160-
+./daemon.go-161-	defer d.publishRuntimeState()
+./daemon.go-162-
+./daemon.go-163-	switch m := msg.(type) {
+./daemon.go-164-	case ipc.LibraryRequestMsg:
+./daemon.go-165-		d.handleLibrary(m)
+./daemon.go-166-		return
+./daemon.go-167-	case ipc.LyricsRequestMsg:
+./daemon.go:168:		d.handleLyrics(m)
+./daemon.go-169-		return
+./daemon.go-170-	case ipc.HistoryRequestMsg:
+./daemon.go-171-		d.handleHistory(m)
+./daemon.go-172-		return
+./daemon.go-173-	case ipc.URLRequestMsg:
+./daemon.go-174-		d.handleURL(m)
+./daemon.go-175-		return
+./daemon.go-176-	case ipc.SaveRequestMsg:
+./daemon.go-177-		d.handleSave(m)
+./daemon.go-178-		return
+./daemon.go-179-	}
+./daemon.go-180-
+./daemon.go-181-	d.mu.Lock()
+./daemon.go-182-	defer d.mu.Unlock()
+./daemon.go-183-
+./daemon.go-184-	switch m := msg.(type) {
+./daemon.go-185-	case playback.PlayMsg:
+./daemon.go-186-		if d.player.IsPaused() {
+./daemon.go-187-			d.resume()
+./daemon.go-188-		} else if !d.player.IsPlaying() && d.playlist.Len() > 0 {
+--
+./daemon.go-970-	tracks := make([]playlist.Track, 0, len(lists))
+./daemon.go-971-	for _, list := range lists {
+./daemon.go-972-		items, err := source.Tracks(list.ID)
+./daemon.go-973-		if err != nil || len(items) == 0 {
+./daemon.go-974-			continue
+./daemon.go-975-		}
+./daemon.go-976-		tracks = append(tracks, items[0])
+./daemon.go-977-	}
+./daemon.go-978-	return tracks, nil
+./daemon.go-979-}
+./daemon.go-980-
+./daemon.go-981-func (d *daemon) provider(key string) (model.ProviderEntry, bool) {
+./daemon.go-982-	for _, entry := range d.providers {
+./daemon.go-983-		if strings.EqualFold(entry.Key, key) {
+./daemon.go-984-			return entry, true
+./daemon.go-985-		}
+./daemon.go-986-	}
+./daemon.go-987-	return model.ProviderEntry{}, false
+./daemon.go-988-}
+./daemon.go-989-
+./daemon.go:990:func (d *daemon) handleLyrics(m ipc.LyricsRequestMsg) {
+./daemon.go-991-	track, idx := d.playlist.Current()
+./daemon.go-992-	if idx < 0 {
+./daemon.go-993-		reply(m.Reply, ipc.Response{OK: false, Error: "no current track"})
+./daemon.go-994-		return
+./daemon.go-995-	}
+./daemon.go-996-	lines := lyrics.ParseEmbedded(track.EmbeddedLyrics)
+./daemon.go-997-	var err error
+./daemon.go-998-	if len(lines) == 0 {
+./daemon.go-999-		lines, err = lyrics.Fetch(track.Artist, track.Title)
+./daemon.go-1000-	}
+./daemon.go-1001-	if err != nil {
+./daemon.go-1002-		reply(m.Reply, ipc.Response{OK: false, Error: err.Error()})
+./daemon.go-1003-		return
+./daemon.go-1004-	}
+./daemon.go-1005-	items := make([]ipc.LyricLine, len(lines))
+./daemon.go-1006-	for i, line := range lines {
+./daemon.go-1007-		items[i] = ipc.LyricLine{Start: line.Start.Seconds(), Text: line.Text}
+./daemon.go-1008-	}
+./daemon.go-1009-	reply(m.Reply, ipc.Response{OK: true, Lyrics: items})
+./daemon.go-1010-}
+
+==================================================
+PATTERN: fetchLyricsForTrack
+==================================================
+./ui/model/playback.go-474-	m.streamTitle = ""
+./ui/model/playback.go-475-	m.lyrics.lines = nil
+./ui/model/playback.go-476-	m.lyrics.err = nil
+./ui/model/playback.go-477-	m.lyrics.query = ""
+./ui/model/playback.go-478-	m.lyrics.scroll = 0
+./ui/model/playback.go-479-	m.seek.active = false
+./ui/model/playback.go-480-	m.seek.inFlight = false
+./ui/model/playback.go-481-	m.seek.pending = false
+./ui/model/playback.go-482-	m.seek.gen++
+./ui/model/playback.go-483-	m.seek.timer = 0
+./ui/model/playback.go-484-	m.seek.timerFor = 0
+./ui/model/playback.go-485-	m.seek.grace = 0
+./ui/model/playback.go-486-	m.seek.graceFor = 0
+./ui/model/playback.go-487-	if m.lyrics.visible {
+./ui/model/playback.go-488-		q := lyricsLookupKey(track, track.Artist, track.Title)
+./ui/model/playback.go-489-		if q == "" {
+./ui/model/playback.go-490-			return track, historyCmd
+./ui/model/playback.go-491-		}
+./ui/model/playback.go-492-		m.lyrics.loading = true
+./ui/model/playback.go-493-		m.lyrics.query = q
+./ui/model/playback.go:494:		return track, tea.Batch(historyCmd, m.fetchLyricsForTrack(track, track.Artist, track.Title))
+./ui/model/playback.go-495-	}
+./ui/model/playback.go-496-	m.lyrics.loading = false
+./ui/model/playback.go-497-	return track, historyCmd
+./ui/model/playback.go-498-}
+./ui/model/playback.go-499-
+./ui/model/playback.go:500:func (m *Model) fetchLyricsForTrack(track playlist.Track, artist, title string) tea.Cmd {
+./ui/model/playback.go-501-	return fetchTrackLyricsCmd(track, artist, title, m.lyrics.query, nextRequest(&m.requests.lyrics))
+./ui/model/playback.go-502-}
+./ui/model/playback.go-503-
+./ui/model/playback.go-504-// togglePlayPause starts playback if stopped, or toggles pause if playing.
+./ui/model/playback.go-505-// For live streams and long-paused yt-dlp streams, unpausing reconnects instead
+./ui/model/playback.go-506-// of playing stale data sitting in OS/decoder buffers from before the pause.
+./ui/model/playback.go-507-func (m *Model) togglePlayPause() tea.Cmd {
+./ui/model/playback.go-508-	if m.buffering {
+./ui/model/playback.go-509-		return nil
+./ui/model/playback.go-510-	}
+./ui/model/playback.go-511-	if !m.player.IsPlaying() {
+./ui/model/playback.go-512-		if m.playlist.CurrentIsQueued() {
+./ui/model/playback.go-513-			return m.playCurrentLogicalTrack()
+./ui/model/playback.go-514-		}
+./ui/model/playback.go-515-		return m.playCurrentTrack()
+./ui/model/playback.go-516-	}
+./ui/model/playback.go-517-	if m.player.IsPaused() {
+./ui/model/playback.go-518-		track, idx := m.currentPlaybackTrack()
+./ui/model/playback.go-519-		pausedFor := time.Duration(0)
+./ui/model/playback.go-520-		if !m.pausedAt.IsZero() {
+--
+./ui/model/lyrics.go-38-	if track.Title != "" {
+./ui/model/lyrics.go-39-		return "embedded\n" + track.Title
+./ui/model/lyrics.go-40-	}
+./ui/model/lyrics.go-41-	return "embedded"
+./ui/model/lyrics.go-42-}
+./ui/model/lyrics.go-43-
+./ui/model/lyrics.go-44-func (m *Model) retryLyrics() tea.Cmd {
+./ui/model/lyrics.go-45-	if m.lyrics.loading {
+./ui/model/lyrics.go-46-		return nil
+./ui/model/lyrics.go-47-	}
+./ui/model/lyrics.go-48-	track, _ := m.currentPlaybackTrack()
+./ui/model/lyrics.go-49-	artist, title := m.lyricsArtistTitle()
+./ui/model/lyrics.go-50-	q := lyricsLookupKey(track, artist, title)
+./ui/model/lyrics.go-51-	if q == "" {
+./ui/model/lyrics.go-52-		return nil
+./ui/model/lyrics.go-53-	}
+./ui/model/lyrics.go-54-	m.lyrics.query = q
+./ui/model/lyrics.go-55-	m.lyrics.loading = true
+./ui/model/lyrics.go-56-	m.lyrics.lines = nil
+./ui/model/lyrics.go-57-	m.lyrics.err = nil
+./ui/model/lyrics.go:58:	return m.fetchLyricsForTrack(track, artist, title)
+./ui/model/lyrics.go-59-}
+./ui/model/lyrics.go-60-
+./ui/model/lyrics.go-61-// lyricsSyncable reports whether synced lyrics can track the current playback
+./ui/model/lyrics.go-62-// position. This is true for local files, Navidrome streams (which have
+./ui/model/lyrics.go-63-// accurate position tracking), and yt-dlp tracks (whose ytdlPipeStreamer
+./ui/model/lyrics.go-64-// reports position from decoded PCM frames). It is false for live radio (ICY —
+./ui/model/lyrics.go-65-// position is from stream start, not song start) and for live streams with no
+./ui/model/lyrics.go-66-// finite duration, where the position doesn't map to song time.
+./ui/model/lyrics.go-67-func (m *Model) lyricsSyncable() bool {
+./ui/model/lyrics.go-68-	track, idx := m.currentPlaybackTrack()
+./ui/model/lyrics.go-69-	if idx < 0 {
+./ui/model/lyrics.go-70-		return false
+./ui/model/lyrics.go-71-	}
+./ui/model/lyrics.go-72-	// yt-dlp pipe streams track position from decoded frames, so synced lyrics
+./ui/model/lyrics.go-73-	// can follow them. Exclude streams without a known duration (e.g. YouTube
+./ui/model/lyrics.go-74-	// Live), where the position is not relative to the song.
+./ui/model/lyrics.go-75-	if playlist.IsYTDL(track.Path) {
+./ui/model/lyrics.go-76-		return track.DurationSecs > 0
+./ui/model/lyrics.go-77-	}
+./ui/model/lyrics.go-78-	// ICY radio streams: position counts from stream connect, not song start.
+
+==================================================
+PATTERN: lyricsSyncable
+==================================================
+./ui/model/lyrics_test.go-37-			track: playlist.Track{Title: "Live", Path: "https://music.youtube.com/watch?v=live", Stream: true, DurationSecs: 0},
+./ui/model/lyrics_test.go-38-			want:  false,
+./ui/model/lyrics_test.go-39-		},
+./ui/model/lyrics_test.go-40-		{
+./ui/model/lyrics_test.go-41-			name:  "icy radio stream without provider metadata",
+./ui/model/lyrics_test.go-42-			track: playlist.Track{Title: "Radio", Path: "https://radio.example/stream", Stream: true},
+./ui/model/lyrics_test.go-43-			want:  false,
+./ui/model/lyrics_test.go-44-		},
+./ui/model/lyrics_test.go-45-		{
+./ui/model/lyrics_test.go-46-			name:  "navidrome provider stream",
+./ui/model/lyrics_test.go-47-			track: playlist.Track{Title: "Nav", Path: "https://nav.example/stream", Stream: true, DurationSecs: 200, ProviderMeta: map[string]string{"navidrome": "id"}},
+./ui/model/lyrics_test.go-48-			want:  true,
+./ui/model/lyrics_test.go-49-		},
+./ui/model/lyrics_test.go-50-	}
+./ui/model/lyrics_test.go-51-	for _, tt := range tests {
+./ui/model/lyrics_test.go-52-		t.Run(tt.name, func(t *testing.T) {
+./ui/model/lyrics_test.go-53-			p := playlist.New()
+./ui/model/lyrics_test.go-54-			p.Replace([]playlist.Track{tt.track})
+./ui/model/lyrics_test.go-55-			p.SetIndex(0)
+./ui/model/lyrics_test.go-56-			m := Model{playlist: p}
+./ui/model/lyrics_test.go:57:			if got := m.lyricsSyncable(); got != tt.want {
+./ui/model/lyrics_test.go:58:				t.Fatalf("lyricsSyncable() = %v, want %v", got, tt.want)
+./ui/model/lyrics_test.go-59-			}
+./ui/model/lyrics_test.go-60-		})
+./ui/model/lyrics_test.go-61-	}
+./ui/model/lyrics_test.go-62-}
+--
+./ui/model/inline_overlays.go-379-	var lines []string
+./ui/model/inline_overlays.go-380-	switch {
+./ui/model/inline_overlays.go-381-	case m.lyrics.loading:
+./ui/model/inline_overlays.go-382-		lines = append(lines, dimStyle.Render("  Searching for lyrics..."))
+./ui/model/inline_overlays.go-383-	case m.lyrics.err != nil:
+./ui/model/inline_overlays.go-384-		if errors.Is(m.lyrics.err, lyrics.ErrNotFound) {
+./ui/model/inline_overlays.go-385-			lines = append(lines, dimStyle.Render("  No lyrics found for this track."))
+./ui/model/inline_overlays.go-386-		} else {
+./ui/model/inline_overlays.go-387-			lines = append(lines, errorStyle.Render("  Lyrics fetch failed: "+m.lyrics.err.Error()))
+./ui/model/inline_overlays.go-388-		}
+./ui/model/inline_overlays.go-389-	case len(m.lyrics.lines) == 0:
+./ui/model/inline_overlays.go-390-		artist, title := m.lyricsArtistTitle()
+./ui/model/inline_overlays.go-391-		if artist == "" && title == "" {
+./ui/model/inline_overlays.go-392-			lines = append(lines, dimStyle.Render("  No artist/title metadata available."))
+./ui/model/inline_overlays.go-393-			if track, idx := m.currentPlaybackTrack(); idx >= 0 && track.Stream {
+./ui/model/inline_overlays.go-394-				lines = append(lines, dimStyle.Render("  Waiting for stream metadata..."))
+./ui/model/inline_overlays.go-395-			}
+./ui/model/inline_overlays.go-396-		} else {
+./ui/model/inline_overlays.go-397-			lines = append(lines, dimStyle.Render("  No lyrics loaded. Press r to retry."))
+./ui/model/inline_overlays.go-398-		}
+./ui/model/inline_overlays.go:399:	case m.lyricsSyncable() && m.lyricsHaveTimestamps():
+./ui/model/inline_overlays.go-400-		pos := m.player.Position()
+./ui/model/inline_overlays.go-401-		activeIdx := -1
+./ui/model/inline_overlays.go-402-		for i, line := range m.lyrics.lines {
+./ui/model/inline_overlays.go-403-			if line.Start <= pos {
+./ui/model/inline_overlays.go-404-				activeIdx = i
+./ui/model/inline_overlays.go-405-			} else {
+./ui/model/inline_overlays.go-406-				break
+./ui/model/inline_overlays.go-407-			}
+./ui/model/inline_overlays.go-408-		}
+./ui/model/inline_overlays.go-409-		half := visible / 2
+./ui/model/inline_overlays.go-410-		startIdx := max(activeIdx-half, 0)
+./ui/model/inline_overlays.go-411-		endIdx := startIdx + visible
+./ui/model/inline_overlays.go-412-		if endIdx > len(m.lyrics.lines) {
+./ui/model/inline_overlays.go-413-			endIdx = len(m.lyrics.lines)
+./ui/model/inline_overlays.go-414-			startIdx = max(endIdx-visible, 0)
+./ui/model/inline_overlays.go-415-		}
+./ui/model/inline_overlays.go-416-		for i := startIdx; i < endIdx; i++ {
+./ui/model/inline_overlays.go-417-			text := m.lyrics.lines[i].Text
+./ui/model/inline_overlays.go-418-			if text == "" {
+./ui/model/inline_overlays.go-419-				text = "♪"
+--
+./ui/model/keys.go-285-		case "down", "j":
+./ui/model/keys.go-286-			m.infoScroll++
+./ui/model/keys.go-287-			m.infoMaybeAdjustScroll()
+./ui/model/keys.go-288-		}
+./ui/model/keys.go-289-		return nil
+./ui/model/keys.go-290-	}
+./ui/model/keys.go-291-
+./ui/model/keys.go-292-	// Lyrics overlay
+./ui/model/keys.go-293-	if m.lyrics.visible {
+./ui/model/keys.go-294-		switch msg.String() {
+./ui/model/keys.go-295-		case "ctrl+c":
+./ui/model/keys.go-296-			return m.quit()
+./ui/model/keys.go-297-		case "esc", "y":
+./ui/model/keys.go-298-			nextRequest(&m.requests.lyrics)
+./ui/model/keys.go-299-			m.lyrics.loading = false
+./ui/model/keys.go-300-			m.lyrics.query = ""
+./ui/model/keys.go-301-			m.lyrics.visible = false
+./ui/model/keys.go-302-		case "r":
+./ui/model/keys.go-303-			return m.retryLyrics()
+./ui/model/keys.go-304-		case "up", "k":
+./ui/model/keys.go:305:			if !(m.lyricsSyncable() && m.lyricsHaveTimestamps()) && m.lyrics.scroll > 0 {
+./ui/model/keys.go-306-				m.lyrics.scroll--
+./ui/model/keys.go-307-			}
+./ui/model/keys.go-308-		case "down", "j":
+./ui/model/keys.go:309:			if !(m.lyricsSyncable() && m.lyricsHaveTimestamps()) {
+./ui/model/keys.go-310-				maxScroll := max(len(m.lyrics.lines)-1, 0)
+./ui/model/keys.go-311-				if m.lyrics.scroll < maxScroll {
+./ui/model/keys.go-312-					m.lyrics.scroll++
+./ui/model/keys.go-313-				}
+./ui/model/keys.go-314-			}
+./ui/model/keys.go-315-		case "ctrl+x":
+./ui/model/keys.go-316-			m.toggleExpandedView()
+./ui/model/keys.go-317-		}
+./ui/model/keys.go-318-		return nil
+./ui/model/keys.go-319-	}
+./ui/model/keys.go-320-
+./ui/model/keys.go-321-	if m.jumping {
+./ui/model/keys.go-322-		return m.handleJumpKey(msg)
+./ui/model/keys.go-323-	}
+./ui/model/keys.go-324-
+./ui/model/keys.go-325-	if m.urlInputting {
+./ui/model/keys.go-326-		return m.handleURLInputKey(msg)
+./ui/model/keys.go-327-	}
+./ui/model/keys.go-328-
+./ui/model/keys.go-329-	if m.search.active {
+--
+./ui/model/lyrics.go-41-	return "embedded"
+./ui/model/lyrics.go-42-}
+./ui/model/lyrics.go-43-
+./ui/model/lyrics.go-44-func (m *Model) retryLyrics() tea.Cmd {
+./ui/model/lyrics.go-45-	if m.lyrics.loading {
+./ui/model/lyrics.go-46-		return nil
+./ui/model/lyrics.go-47-	}
+./ui/model/lyrics.go-48-	track, _ := m.currentPlaybackTrack()
+./ui/model/lyrics.go-49-	artist, title := m.lyricsArtistTitle()
+./ui/model/lyrics.go-50-	q := lyricsLookupKey(track, artist, title)
+./ui/model/lyrics.go-51-	if q == "" {
+./ui/model/lyrics.go-52-		return nil
+./ui/model/lyrics.go-53-	}
+./ui/model/lyrics.go-54-	m.lyrics.query = q
+./ui/model/lyrics.go-55-	m.lyrics.loading = true
+./ui/model/lyrics.go-56-	m.lyrics.lines = nil
+./ui/model/lyrics.go-57-	m.lyrics.err = nil
+./ui/model/lyrics.go-58-	return m.fetchLyricsForTrack(track, artist, title)
+./ui/model/lyrics.go-59-}
+./ui/model/lyrics.go-60-
+./ui/model/lyrics.go:61:// lyricsSyncable reports whether synced lyrics can track the current playback
+./ui/model/lyrics.go-62-// position. This is true for local files, Navidrome streams (which have
+./ui/model/lyrics.go-63-// accurate position tracking), and yt-dlp tracks (whose ytdlPipeStreamer
+./ui/model/lyrics.go-64-// reports position from decoded PCM frames). It is false for live radio (ICY —
+./ui/model/lyrics.go-65-// position is from stream start, not song start) and for live streams with no
+./ui/model/lyrics.go-66-// finite duration, where the position doesn't map to song time.
+./ui/model/lyrics.go:67:func (m *Model) lyricsSyncable() bool {
+./ui/model/lyrics.go-68-	track, idx := m.currentPlaybackTrack()
+./ui/model/lyrics.go-69-	if idx < 0 {
+./ui/model/lyrics.go-70-		return false
+./ui/model/lyrics.go-71-	}
+./ui/model/lyrics.go-72-	// yt-dlp pipe streams track position from decoded frames, so synced lyrics
+./ui/model/lyrics.go-73-	// can follow them. Exclude streams without a known duration (e.g. YouTube
+./ui/model/lyrics.go-74-	// Live), where the position is not relative to the song.
+./ui/model/lyrics.go-75-	if playlist.IsYTDL(track.Path) {
+./ui/model/lyrics.go-76-		return track.DurationSecs > 0
+./ui/model/lyrics.go-77-	}
+./ui/model/lyrics.go-78-	// ICY radio streams: position counts from stream connect, not song start.
+./ui/model/lyrics.go-79-	// Provider streams with metadata (e.g. Navidrome) track position correctly.
+./ui/model/lyrics.go-80-	if track.Stream && len(track.ProviderMeta) == 0 {
+./ui/model/lyrics.go-81-		return false
+./ui/model/lyrics.go-82-	}
+./ui/model/lyrics.go-83-	return true
+./ui/model/lyrics.go-84-}
+./ui/model/lyrics.go-85-
+./ui/model/lyrics.go-86-// lyricsHaveTimestamps reports whether the loaded lyrics have meaningful
+./ui/model/lyrics.go-87-// timestamps (i.e., not all lines at 0).
+
+==================================================
+PATTERN: \.Lyrics
+==================================================
+./daemon.go-147-}
+./daemon.go-148-
+./daemon.go-149-// handleMessage runs only on the daemon control loop, except in focused tests
+./daemon.go-150-// that construct a daemon without a control channel.
+./daemon.go-151-func (d *daemon) handleMessage(msg any) {
+./daemon.go-152-	switch m := msg.(type) {
+./daemon.go-153-	case daemonV2ReadRequest:
+./daemon.go-154-		d.handleV2ReadRequest(m)
+./daemon.go-155-		return
+./daemon.go-156-	case daemonV2JobRequest:
+./daemon.go-157-		d.handleV2JobRequest(m)
+./daemon.go-158-		return
+./daemon.go-159-	}
+./daemon.go-160-
+./daemon.go-161-	defer d.publishRuntimeState()
+./daemon.go-162-
+./daemon.go-163-	switch m := msg.(type) {
+./daemon.go-164-	case ipc.LibraryRequestMsg:
+./daemon.go-165-		d.handleLibrary(m)
+./daemon.go-166-		return
+./daemon.go:167:	case ipc.LyricsRequestMsg:
+./daemon.go-168-		d.handleLyrics(m)
+./daemon.go-169-		return
+./daemon.go-170-	case ipc.HistoryRequestMsg:
+./daemon.go-171-		d.handleHistory(m)
+./daemon.go-172-		return
+./daemon.go-173-	case ipc.URLRequestMsg:
+./daemon.go-174-		d.handleURL(m)
+./daemon.go-175-		return
+./daemon.go-176-	case ipc.SaveRequestMsg:
+./daemon.go-177-		d.handleSave(m)
+./daemon.go-178-		return
+./daemon.go-179-	}
+./daemon.go-180-
+./daemon.go-181-	d.mu.Lock()
+./daemon.go-182-	defer d.mu.Unlock()
+./daemon.go-183-
+./daemon.go-184-	switch m := msg.(type) {
+./daemon.go-185-	case playback.PlayMsg:
+./daemon.go-186-		if d.player.IsPaused() {
+./daemon.go-187-			d.resume()
+--
+./daemon.go-970-	tracks := make([]playlist.Track, 0, len(lists))
+./daemon.go-971-	for _, list := range lists {
+./daemon.go-972-		items, err := source.Tracks(list.ID)
+./daemon.go-973-		if err != nil || len(items) == 0 {
+./daemon.go-974-			continue
+./daemon.go-975-		}
+./daemon.go-976-		tracks = append(tracks, items[0])
+./daemon.go-977-	}
+./daemon.go-978-	return tracks, nil
+./daemon.go-979-}
+./daemon.go-980-
+./daemon.go-981-func (d *daemon) provider(key string) (model.ProviderEntry, bool) {
+./daemon.go-982-	for _, entry := range d.providers {
+./daemon.go-983-		if strings.EqualFold(entry.Key, key) {
+./daemon.go-984-			return entry, true
+./daemon.go-985-		}
+./daemon.go-986-	}
+./daemon.go-987-	return model.ProviderEntry{}, false
+./daemon.go-988-}
+./daemon.go-989-
+./daemon.go:990:func (d *daemon) handleLyrics(m ipc.LyricsRequestMsg) {
+./daemon.go-991-	track, idx := d.playlist.Current()
+./daemon.go-992-	if idx < 0 {
+./daemon.go-993-		reply(m.Reply, ipc.Response{OK: false, Error: "no current track"})
+./daemon.go-994-		return
+./daemon.go-995-	}
+./daemon.go-996-	lines := lyrics.ParseEmbedded(track.EmbeddedLyrics)
+./daemon.go-997-	var err error
+./daemon.go-998-	if len(lines) == 0 {
+./daemon.go-999-		lines, err = lyrics.Fetch(track.Artist, track.Title)
+./daemon.go-1000-	}
+./daemon.go-1001-	if err != nil {
+./daemon.go-1002-		reply(m.Reply, ipc.Response{OK: false, Error: err.Error()})
+./daemon.go-1003-		return
+./daemon.go-1004-	}
+./daemon.go-1005-	items := make([]ipc.LyricLine, len(lines))
+./daemon.go-1006-	for i, line := range lines {
+./daemon.go-1007-		items[i] = ipc.LyricLine{Start: line.Start.Seconds(), Text: line.Text}
+./daemon.go-1008-	}
+./daemon.go-1009-	reply(m.Reply, ipc.Response{OK: true, Lyrics: items})
+./daemon.go-1010-}
+--
+./ui/model/ipc_runtime.go-465-
+./ui/model/ipc_runtime.go-466-func (m *Model) handleV2LibraryRequest(ctx context.Context, jobs *ipc.JobStore, jobID string, request ipc.Request) tea.Cmd {
+./ui/model/ipc_runtime.go-467-	reply := make(chan ipc.Response, 1)
+./ui/model/ipc_runtime.go-468-	cmd := m.handleIPCLibrary(ipc.LibraryRequestMsg{
+./ui/model/ipc_runtime.go-469-		Op: request.Cmd, Provider: request.Provider, Playlist: request.Playlist, Query: request.Query,
+./ui/model/ipc_runtime.go-470-		Artist: request.Artist, Album: request.Album, Sort: request.Sort, Offset: request.Offset,
+./ui/model/ipc_runtime.go-471-		Limit: request.Limit, Index: request.Index, NewName: request.NewName, Track: request.Track, Tracks: request.Tracks, Context: ctx, Reply: reply,
+./ui/model/ipc_runtime.go-472-	})
+./ui/model/ipc_runtime.go-473-	return tea.Batch(cmd, waitV2ResponseCmd(ctx, jobs, jobID, reply))
+./ui/model/ipc_runtime.go-474-}
+./ui/model/ipc_runtime.go-475-
+./ui/model/ipc_runtime.go-476-func (m *Model) handleV2DeferredRequest(ctx context.Context, jobs *ipc.JobStore, jobID string, request ipc.Request) tea.Cmd {
+./ui/model/ipc_runtime.go-477-	reply := make(chan ipc.Response, 1)
+./ui/model/ipc_runtime.go-478-	var cmd tea.Cmd
+./ui/model/ipc_runtime.go-479-	switch request.Cmd {
+./ui/model/ipc_runtime.go-480-	case "url.load":
+./ui/model/ipc_runtime.go-481-		cmd = m.handleIPCURL(ipc.URLRequestMsg{URL: request.Path, Play: request.Play, Context: ctx, Reply: reply})
+./ui/model/ipc_runtime.go-482-	case "save":
+./ui/model/ipc_runtime.go-483-		cmd = m.handleIPCSave(ipc.SaveRequestMsg{Reply: reply})
+./ui/model/ipc_runtime.go-484-	case "lyrics":
+./ui/model/ipc_runtime.go:485:		cmd = m.handleIPCLyrics(ipc.LyricsRequestMsg{Reply: reply})
+./ui/model/ipc_runtime.go-486-	default:
+./ui/model/ipc_runtime.go-487-		cmd = m.handleIPCHistory(ipc.HistoryRequestMsg{Op: request.Cmd, Limit: request.Limit, Reply: reply})
+./ui/model/ipc_runtime.go-488-	}
+./ui/model/ipc_runtime.go-489-	return tea.Batch(cmd, waitV2ResponseCmd(ctx, jobs, jobID, reply))
+./ui/model/ipc_runtime.go-490-}
+./ui/model/ipc_runtime.go-491-
+./ui/model/ipc_runtime.go-492-func waitV2ResponseCmd(ctx context.Context, jobs *ipc.JobStore, jobID string, reply <-chan ipc.Response) tea.Cmd {
+./ui/model/ipc_runtime.go-493-	return func() tea.Msg {
+./ui/model/ipc_runtime.go-494-		select {
+./ui/model/ipc_runtime.go-495-		case response := <-reply:
+./ui/model/ipc_runtime.go-496-			return ipcV2ResponseMsg{Jobs: jobs, JobID: jobID, Response: response}
+./ui/model/ipc_runtime.go-497-		case <-ctx.Done():
+./ui/model/ipc_runtime.go-498-			return nil
+./ui/model/ipc_runtime.go-499-		}
+./ui/model/ipc_runtime.go-500-	}
+./ui/model/ipc_runtime.go-501-}
+./ui/model/ipc_runtime.go-502-
+./ui/model/ipc_runtime.go-503-func (m *Model) completeV2Job(jobs *ipc.JobStore, jobID string, result any) {
+./ui/model/ipc_runtime.go-504-	if jobs == nil || jobID == "" {
+./ui/model/ipc_runtime.go-505-		return
+--
+./ui/model/update.go-1207-			return m, nil
+./ui/model/update.go-1208-		}
+./ui/model/update.go-1209-		_ = m.configSaver.Save("audio_device", msg.Name)
+./ui/model/update.go-1210-		m.status.Showf(statusTTLDefault, "Audio output: %s", msg.Name)
+./ui/model/update.go-1211-		// Invalidate cached list so the next open refreshes Active markers.
+./ui/model/update.go-1212-		m.devicePicker.devices = nil
+./ui/model/update.go-1213-		if msg.Reply != nil {
+./ui/model/update.go-1214-			msg.Reply <- ipc.Response{OK: true, Device: msg.Name}
+./ui/model/update.go-1215-		}
+./ui/model/update.go-1216-		return m, nil
+./ui/model/update.go-1217-
+./ui/model/update.go-1218-	case ipc.QueueRequestMsg:
+./ui/model/update.go-1219-		return m, m.handleIPCQueue(msg)
+./ui/model/update.go-1220-
+./ui/model/update.go-1221-	case ipc.LibraryRequestMsg:
+./ui/model/update.go-1222-		return m, m.handleIPCLibrary(msg)
+./ui/model/update.go-1223-
+./ui/model/update.go-1224-	case ipcProviderLoadResult:
+./ui/model/update.go-1225-		return m, m.handleIPCProviderLoad(msg)
+./ui/model/update.go-1226-
+./ui/model/update.go:1227:	case ipc.LyricsRequestMsg:
+./ui/model/update.go-1228-		return m, m.handleIPCLyrics(msg)
+./ui/model/update.go-1229-
+./ui/model/update.go-1230-	case ipc.HistoryRequestMsg:
+./ui/model/update.go-1231-		return m, m.handleIPCHistory(msg)
+./ui/model/update.go-1232-
+./ui/model/update.go-1233-	case ipc.URLRequestMsg:
+./ui/model/update.go-1234-		return m, m.handleIPCURL(msg)
+./ui/model/update.go-1235-
+./ui/model/update.go-1236-	case ipcURLLoadResult:
+./ui/model/update.go-1237-		return m, m.handleIPCURLResult(msg)
+./ui/model/update.go-1238-
+./ui/model/update.go-1239-	case ipc.SaveRequestMsg:
+./ui/model/update.go-1240-		return m, m.handleIPCSave(msg)
+./ui/model/update.go-1241-
+./ui/model/update.go-1242-	case V2RequestMsg:
+./ui/model/update.go-1243-		return m, m.handleV2Request(msg)
+./ui/model/update.go-1244-
+./ui/model/update.go-1245-	case ipcV2ResponseMsg:
+./ui/model/update.go-1246-		if msg.Response.OK {
+./ui/model/update.go-1247-			if msg.Operation == "device" && msg.Response.Device != "" {
+--
+./ui/model/ipc_extended.go-539-
+./ui/model/ipc_extended.go-540-func requestContext(ctx context.Context) context.Context {
+./ui/model/ipc_extended.go-541-	if ctx == nil {
+./ui/model/ipc_extended.go-542-		return context.Background()
+./ui/model/ipc_extended.go-543-	}
+./ui/model/ipc_extended.go-544-	return ctx
+./ui/model/ipc_extended.go-545-}
+./ui/model/ipc_extended.go-546-
+./ui/model/ipc_extended.go-547-func ipcPage[T any](items []T, offset, limit, max int) ([]T, int) {
+./ui/model/ipc_extended.go-548-	total := len(items)
+./ui/model/ipc_extended.go-549-	if offset < 0 || offset >= total {
+./ui/model/ipc_extended.go-550-		return nil, total
+./ui/model/ipc_extended.go-551-	}
+./ui/model/ipc_extended.go-552-	if limit <= 0 || limit > max {
+./ui/model/ipc_extended.go-553-		limit = max
+./ui/model/ipc_extended.go-554-	}
+./ui/model/ipc_extended.go-555-	end := min(total, offset+limit)
+./ui/model/ipc_extended.go-556-	return items[offset:end], total
+./ui/model/ipc_extended.go-557-}
+./ui/model/ipc_extended.go-558-
+./ui/model/ipc_extended.go:559:func (m *Model) handleIPCLyrics(request ipc.LyricsRequestMsg) tea.Cmd {
+./ui/model/ipc_extended.go-560-	track, idx := m.currentPlaybackTrack()
+./ui/model/ipc_extended.go-561-	if idx < 0 {
+./ui/model/ipc_extended.go-562-		request.Reply <- ipc.Response{OK: false, Error: "no current track"}
+./ui/model/ipc_extended.go-563-		return nil
+./ui/model/ipc_extended.go-564-	}
+./ui/model/ipc_extended.go-565-	return func() tea.Msg {
+./ui/model/ipc_extended.go-566-		lines := lyrics.ParseEmbedded(track.EmbeddedLyrics)
+./ui/model/ipc_extended.go-567-		var err error
+./ui/model/ipc_extended.go-568-		if len(lines) == 0 {
+./ui/model/ipc_extended.go-569-			lines, err = lyrics.Fetch(track.Artist, track.Title)
+./ui/model/ipc_extended.go-570-		}
+./ui/model/ipc_extended.go-571-		if err != nil {
+./ui/model/ipc_extended.go-572-			request.Reply <- ipc.Response{OK: false, Error: err.Error()}
+./ui/model/ipc_extended.go-573-			return nil
+./ui/model/ipc_extended.go-574-		}
+./ui/model/ipc_extended.go-575-		items := make([]ipc.LyricLine, len(lines))
+./ui/model/ipc_extended.go-576-		for i, line := range lines {
+./ui/model/ipc_extended.go-577-			items[i] = ipc.LyricLine{Start: line.Start.Seconds(), Text: line.Text}
+./ui/model/ipc_extended.go-578-		}
+./ui/model/ipc_extended.go-579-		request.Reply <- ipc.Response{OK: true, Lyrics: items}
+--
+./daemon_v2.go-257-		if params.Path == "" {
+./daemon_v2.go-258-			return ipc.Response{}, daemonV2InvalidParamsError()
+./daemon_v2.go-259-		}
+./daemon_v2.go-260-		d.handleMessage(ipc.QueueMsg{Path: params.Path})
+./daemon_v2.go-261-		return d.queueResponse(), nil
+./daemon_v2.go-262-	case "queue.list", "queue.play", "queue.enqueue", "queue.remove", "queue.move", "queue.clear", "track.play", "track.queue":
+./daemon_v2.go-263-		if params.Cmd == "queue.list" {
+./daemon_v2.go-264-			return d.queueResponsePage(params.Offset, params.Limit), nil
+./daemon_v2.go-265-		}
+./daemon_v2.go-266-		return d.v2Reply(ipc.QueueRequestMsg{Op: params.Cmd, Index: params.Index, To: params.To, Track: params.Track})
+./daemon_v2.go-267-	case "playnext.list", "playnext.remove", "playnext.move", "playnext.clear":
+./daemon_v2.go-268-		return d.handleV2PlayNext(params)
+./daemon_v2.go-269-	case "url.load":
+./daemon_v2.go-270-		if params.Path == "" {
+./daemon_v2.go-271-			return ipc.Response{}, daemonV2InvalidParamsError()
+./daemon_v2.go-272-		}
+./daemon_v2.go-273-		return d.v2Reply(ipc.URLRequestMsg{URL: params.Path, Play: params.Play})
+./daemon_v2.go-274-	case "save":
+./daemon_v2.go-275-		return d.v2Reply(ipc.SaveRequestMsg{})
+./daemon_v2.go-276-	case "lyrics":
+./daemon_v2.go:277:		return d.v2Reply(ipc.LyricsRequestMsg{})
+./daemon_v2.go-278-	case "history", "history.clear":
+./daemon_v2.go-279-		return d.v2Reply(ipc.HistoryRequestMsg{Op: params.Cmd, Limit: params.Limit})
+./daemon_v2.go-280-	case "provider.list", "provider.playlists", "provider.tracks", "provider.load", "provider.search",
+./daemon_v2.go-281-		"provider.artists", "provider.artist_albums", "provider.albums", "provider.album_tracks", "provider.load_album",
+./daemon_v2.go-282-		"provider.favorite", "provider.catalog",
+./daemon_v2.go-283-		"playlist.create", "playlist.rename", "playlist.delete", "playlist.add", "playlist.add_many", "playlist.replace", "playlist.remove", "playlist.bookmark":
+./daemon_v2.go-284-		return d.v2Reply(ipc.LibraryRequestMsg{
+./daemon_v2.go-285-			Op: params.Cmd, Provider: params.Provider, Playlist: params.Playlist, Query: params.Query,
+./daemon_v2.go-286-			Artist: params.Artist, Album: params.Album, Sort: params.Sort, Offset: params.Offset,
+./daemon_v2.go-287-			Limit: params.Limit, Index: params.Index, NewName: params.NewName, Track: params.Track, Tracks: params.Tracks,
+./daemon_v2.go-288-		})
+./daemon_v2.go-289-	default:
+./daemon_v2.go-290-		return ipc.Response{}, daemonV2UnavailableError()
+./daemon_v2.go-291-	}
+./daemon_v2.go-292-	return ipc.Response{OK: true}, nil
+./daemon_v2.go-293-}
+./daemon_v2.go-294-
+./daemon_v2.go-295-func (d *daemon) v2Reply(message any) (ipc.Response, *ipc.V2Error) {
+./daemon_v2.go-296-	reply := make(chan ipc.Response, 1)
+./daemon_v2.go-297-	switch m := message.(type) {
+--
+./daemon_v2.go-314-		m.Reply = reply
+./daemon_v2.go-315-		message = m
+./daemon_v2.go-316-	case ipc.ThemeMsg:
+./daemon_v2.go-317-		m.Reply = reply
+./daemon_v2.go-318-		message = m
+./daemon_v2.go-319-	case ipc.VisMsg:
+./daemon_v2.go-320-		m.Reply = reply
+./daemon_v2.go-321-		message = m
+./daemon_v2.go-322-	case ipc.LoadMsg:
+./daemon_v2.go-323-		m.Reply = reply
+./daemon_v2.go-324-		message = m
+./daemon_v2.go-325-	case ipc.QueueRequestMsg:
+./daemon_v2.go-326-		m.Reply = reply
+./daemon_v2.go-327-		message = m
+./daemon_v2.go-328-	case ipc.URLRequestMsg:
+./daemon_v2.go-329-		m.Reply = reply
+./daemon_v2.go-330-		message = m
+./daemon_v2.go-331-	case ipc.SaveRequestMsg:
+./daemon_v2.go-332-		m.Reply = reply
+./daemon_v2.go-333-		message = m
+./daemon_v2.go:334:	case ipc.LyricsRequestMsg:
+./daemon_v2.go-335-		m.Reply = reply
+./daemon_v2.go-336-		message = m
+./daemon_v2.go-337-	case ipc.HistoryRequestMsg:
+./daemon_v2.go-338-		m.Reply = reply
+./daemon_v2.go-339-		message = m
+./daemon_v2.go-340-	case ipc.LibraryRequestMsg:
+./daemon_v2.go-341-		m.Reply = reply
+./daemon_v2.go-342-		message = m
+./daemon_v2.go-343-	default:
+./daemon_v2.go-344-		return ipc.Response{}, daemonV2InternalError()
+./daemon_v2.go-345-	}
+./daemon_v2.go-346-	d.handleMessage(message)
+./daemon_v2.go-347-	return <-reply, nil
+./daemon_v2.go-348-}
+./daemon_v2.go-349-
+./daemon_v2.go-350-func (d *daemon) handleV2PlayNext(request ipc.Request) (ipc.Response, *ipc.V2Error) {
+./daemon_v2.go-351-	d.mu.Lock()
+./daemon_v2.go-352-	defer d.mu.Unlock()
+./daemon_v2.go-353-	if d.playlist == nil {
+./daemon_v2.go-354-		return ipc.Response{}, daemonV2UnavailableError()
+--
+./playlist/tags.go-52-// tag reading fails or the tags contain no title.
+./playlist/tags.go-53-func readTags(path string) Track {
+./playlist/tags.go-54-	t, _ := readTagsWithOptions(path, false)
+./playlist/tags.go-55-	return t
+./playlist/tags.go-56-}
+./playlist/tags.go-57-
+./playlist/tags.go-58-func readTagsWithOptions(path string, cacheArt bool) (Track, bool) {
+./playlist/tags.go-59-	f, err := os.Open(path)
+./playlist/tags.go-60-	if err != nil {
+./playlist/tags.go-61-		return TrackFromFilename(path), false
+./playlist/tags.go-62-	}
+./playlist/tags.go-63-	defer f.Close()
+./playlist/tags.go-64-
+./playlist/tags.go-65-	m, err := tag.ReadFrom(f)
+./playlist/tags.go-66-	if err != nil || m == nil {
+./playlist/tags.go-67-		return TrackFromFilename(path), true
+./playlist/tags.go-68-	}
+./playlist/tags.go-69-
+./playlist/tags.go-70-	t := Track{
+./playlist/tags.go-71-		Path:           path,
+./playlist/tags.go:72:		EmbeddedLyrics: sanitizeTag(strings.TrimSpace(m.Lyrics())),
+./playlist/tags.go-73-	}
+./playlist/tags.go-74-	if cacheArt {
+./playlist/tags.go-75-		t.AlbumArtURL = cacheAlbumArt(m.Picture())
+./playlist/tags.go-76-	}
+./playlist/tags.go-77-	if strings.TrimSpace(m.Title()) == "" {
+./playlist/tags.go-78-		fallback := TrackFromFilename(path)
+./playlist/tags.go-79-		fallback.EmbeddedLyrics = t.EmbeddedLyrics
+./playlist/tags.go-80-		fallback.AlbumArtURL = t.AlbumArtURL
+./playlist/tags.go-81-		return fallback, true
+./playlist/tags.go-82-	}
+./playlist/tags.go-83-
+./playlist/tags.go-84-	t.Title = sanitizeTag(strings.TrimSpace(m.Title()))
+./playlist/tags.go-85-	t.Artist = sanitizeTag(strings.TrimSpace(m.Artist()))
+./playlist/tags.go-86-	t.Album = sanitizeTag(strings.TrimSpace(m.Album()))
+./playlist/tags.go-87-	t.Genre = sanitizeTag(strings.TrimSpace(m.Genre()))
+./playlist/tags.go-88-	t.Year = m.Year()
+./playlist/tags.go-89-	trackNum, _ := m.Track()
+./playlist/tags.go-90-	t.TrackNumber = trackNum
+./playlist/tags.go-91-	return t, true
+./playlist/tags.go-92-}
+
+==================================================
+PATTERN: USLT
+==================================================
+
+==================================================
+PATTERN: SYLT
+==================================================
+
+==================================================
+PATTERN: PlainLyrics
+==================================================
+./lyrics/fetch_test.go-59-		}
+./lyrics/fetch_test.go-60-	}))
+./lyrics/fetch_test.go-61-	defer srv.Close()
+./lyrics/fetch_test.go-62-	installTestClient(t, srv.URL)
+./lyrics/fetch_test.go-63-
+./lyrics/fetch_test.go-64-	lines, err := Fetch("Artist", "Song")
+./lyrics/fetch_test.go-65-	if err != nil {
+./lyrics/fetch_test.go-66-		t.Fatalf("Fetch: %v", err)
+./lyrics/fetch_test.go-67-	}
+./lyrics/fetch_test.go-68-	if len(lines) != 1 {
+./lyrics/fetch_test.go-69-		t.Fatalf("got %d lines, want 1", len(lines))
+./lyrics/fetch_test.go-70-	}
+./lyrics/fetch_test.go-71-	if lines[0].Text != "Hello" {
+./lyrics/fetch_test.go-72-		t.Errorf("Text = %q, want Hello", lines[0].Text)
+./lyrics/fetch_test.go-73-	}
+./lyrics/fetch_test.go-74-	if lines[0].Start != 5*time.Second {
+./lyrics/fetch_test.go-75-		t.Errorf("Start = %v, want 5s", lines[0].Start)
+./lyrics/fetch_test.go-76-	}
+./lyrics/fetch_test.go-77-}
+./lyrics/fetch_test.go-78-
+./lyrics/fetch_test.go:79:func TestFetchFallsBackToPlainLyrics(t *testing.T) {
+./lyrics/fetch_test.go-80-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+./lyrics/fetch_test.go-81-		w.Header().Set("Content-Type", "application/json")
+./lyrics/fetch_test.go-82-		_, _ = w.Write([]byte(`[{"syncedLyrics":"","plainLyrics":"Line one\nLine two"}]`))
+./lyrics/fetch_test.go-83-	}))
+./lyrics/fetch_test.go-84-	defer srv.Close()
+./lyrics/fetch_test.go-85-	installTestClient(t, srv.URL)
+./lyrics/fetch_test.go-86-
+./lyrics/fetch_test.go-87-	lines, err := Fetch("Artist", "Song")
+./lyrics/fetch_test.go-88-	if err != nil {
+./lyrics/fetch_test.go-89-		t.Fatalf("Fetch: %v", err)
+./lyrics/fetch_test.go-90-	}
+./lyrics/fetch_test.go-91-	if len(lines) != 2 {
+./lyrics/fetch_test.go-92-		t.Fatalf("got %d lines, want 2", len(lines))
+./lyrics/fetch_test.go-93-	}
+./lyrics/fetch_test.go-94-	if lines[0].Text != "Line one" || lines[1].Text != "Line two" {
+./lyrics/fetch_test.go-95-		t.Errorf("lines = %+v, want [Line one, Line two]", lines)
+./lyrics/fetch_test.go-96-	}
+./lyrics/fetch_test.go-97-	// Plain lyrics all share timestamp zero.
+./lyrics/fetch_test.go-98-	if lines[0].Start != 0 {
+./lyrics/fetch_test.go-99-		t.Errorf("Start[0] = %v, want 0", lines[0].Start)
+--
+./lyrics/lyrics.go-13-	"time"
+./lyrics/lyrics.go-14-)
+./lyrics/lyrics.go-15-
+./lyrics/lyrics.go-16-// ErrNotFound is returned when no lyrics could be found from any source.
+./lyrics/lyrics.go-17-var ErrNotFound = errors.New("no lyrics found")
+./lyrics/lyrics.go-18-
+./lyrics/lyrics.go-19-// Line represents a single timestamped lyrical line.
+./lyrics/lyrics.go-20-type Line struct {
+./lyrics/lyrics.go-21-	Start time.Duration
+./lyrics/lyrics.go-22-	Text  string
+./lyrics/lyrics.go-23-}
+./lyrics/lyrics.go-24-
+./lyrics/lyrics.go-25-// httpClient is reused across all lyrics API calls.
+./lyrics/lyrics.go-26-var httpClient = &http.Client{Timeout: 10 * time.Second}
+./lyrics/lyrics.go-27-
+./lyrics/lyrics.go-28-// maxResponseBody limits API responses to 2 MB.
+./lyrics/lyrics.go-29-const maxResponseBody = 2 << 20
+./lyrics/lyrics.go-30-
+./lyrics/lyrics.go-31-type lrcResponse struct {
+./lyrics/lyrics.go-32-	SyncedLyrics string `json:"syncedLyrics"`
+./lyrics/lyrics.go:33:	PlainLyrics  string `json:"plainLyrics"`
+./lyrics/lyrics.go-34-}
+./lyrics/lyrics.go-35-
+./lyrics/lyrics.go-36-type ncmSearchResponse struct {
+./lyrics/lyrics.go-37-	Result struct {
+./lyrics/lyrics.go-38-		Songs []struct {
+./lyrics/lyrics.go-39-			Id int `json:"id"`
+./lyrics/lyrics.go-40-		} `json:"songs"`
+./lyrics/lyrics.go-41-	} `json:"result"`
+./lyrics/lyrics.go-42-}
+./lyrics/lyrics.go-43-
+./lyrics/lyrics.go-44-type ncmLyricResponse struct {
+./lyrics/lyrics.go-45-	Lrc struct {
+./lyrics/lyrics.go-46-		Lyric string `json:"lyric"`
+./lyrics/lyrics.go-47-	} `json:"lrc"`
+./lyrics/lyrics.go-48-}
+./lyrics/lyrics.go-49-
+./lyrics/lyrics.go-50-var lrcRegex = regexp.MustCompile(`\[(\d{2,}):(\d{2})\.(\d{2,3})\](.*)`)
+./lyrics/lyrics.go-51-
+./lyrics/lyrics.go-52-// cleanQuery strips noise from a search query: bracketed text like "[Official Video]",
+./lyrics/lyrics.go-53-// parenthesized text like "(Lyric Video)", and common video/audio label suffixes.
+--
+./lyrics/lyrics.go-149-		return nil, fmt.Errorf("lrclib: %s", resp.Status)
+./lyrics/lyrics.go-150-	}
+./lyrics/lyrics.go-151-
+./lyrics/lyrics.go-152-	var results []lrcResponse
+./lyrics/lyrics.go-153-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(&results); err != nil {
+./lyrics/lyrics.go-154-		return nil, err
+./lyrics/lyrics.go-155-	}
+./lyrics/lyrics.go-156-
+./lyrics/lyrics.go-157-	if len(results) == 0 {
+./lyrics/lyrics.go-158-		return nil, ErrNotFound
+./lyrics/lyrics.go-159-	}
+./lyrics/lyrics.go-160-
+./lyrics/lyrics.go-161-	// Prefer synced lyrics.
+./lyrics/lyrics.go-162-	for _, r := range results {
+./lyrics/lyrics.go-163-		if r.SyncedLyrics != "" {
+./lyrics/lyrics.go-164-			return parseLRC(r.SyncedLyrics), nil
+./lyrics/lyrics.go-165-		}
+./lyrics/lyrics.go-166-	}
+./lyrics/lyrics.go-167-
+./lyrics/lyrics.go-168-	// Fallback to plain lyrics (all lines at timestamp 0).
+./lyrics/lyrics.go:169:	if results[0].PlainLyrics != "" {
+./lyrics/lyrics.go-170-		var lines []Line
+./lyrics/lyrics.go:171:		for raw := range strings.SplitSeq(results[0].PlainLyrics, "\n") {
+./lyrics/lyrics.go-172-			lines = append(lines, Line{Start: 0, Text: strings.TrimSpace(raw)})
+./lyrics/lyrics.go-173-		}
+./lyrics/lyrics.go-174-		return lines, nil
+./lyrics/lyrics.go-175-	}
+./lyrics/lyrics.go-176-
+./lyrics/lyrics.go-177-	return nil, ErrNotFound
+./lyrics/lyrics.go-178-}
+./lyrics/lyrics.go-179-
+./lyrics/lyrics.go-180-func fetchNetEase(query string) ([]Line, error) {
+./lyrics/lyrics.go-181-	data := url.Values{}
+./lyrics/lyrics.go-182-	data.Set("s", query)
+./lyrics/lyrics.go-183-	data.Set("type", "1")
+./lyrics/lyrics.go-184-	data.Set("limit", "1")
+./lyrics/lyrics.go-185-
+./lyrics/lyrics.go-186-	req, err := http.NewRequest("POST", "http://music.163.com/api/search/get/web", strings.NewReader(data.Encode()))
+./lyrics/lyrics.go-187-	if err != nil {
+./lyrics/lyrics.go-188-		return nil, err
+./lyrics/lyrics.go-189-	}
+./lyrics/lyrics.go-190-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+./lyrics/lyrics.go-191-	req.Header.Set("Referer", "http://music.163.com")
+
+==================================================
+PATTERN: SyncedLyrics
+==================================================
+./lyrics/fetch_test.go-31-	t.Helper()
+./lyrics/fetch_test.go-32-	u, err := url.Parse(serverURL)
+./lyrics/fetch_test.go-33-	if err != nil {
+./lyrics/fetch_test.go-34-		t.Fatalf("parse server URL: %v", err)
+./lyrics/fetch_test.go-35-	}
+./lyrics/fetch_test.go-36-	old := httpClient
+./lyrics/fetch_test.go-37-	httpClient = &http.Client{
+./lyrics/fetch_test.go-38-		Timeout:   5 * time.Second,
+./lyrics/fetch_test.go-39-		Transport: hostRewriteTransport{target: u, rt: http.DefaultTransport},
+./lyrics/fetch_test.go-40-	}
+./lyrics/fetch_test.go-41-	t.Cleanup(func() { httpClient = old })
+./lyrics/fetch_test.go-42-}
+./lyrics/fetch_test.go-43-
+./lyrics/fetch_test.go-44-func TestFetchBothEmptyReturnsNotFound(t *testing.T) {
+./lyrics/fetch_test.go-45-	_, err := Fetch("", "")
+./lyrics/fetch_test.go-46-	if err != ErrNotFound {
+./lyrics/fetch_test.go-47-		t.Errorf("Fetch(\"\", \"\") = %v, want ErrNotFound", err)
+./lyrics/fetch_test.go-48-	}
+./lyrics/fetch_test.go-49-}
+./lyrics/fetch_test.go-50-
+./lyrics/fetch_test.go:51:func TestFetchPrefersSyncedLyrics(t *testing.T) {
+./lyrics/fetch_test.go-52-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+./lyrics/fetch_test.go-53-		switch r.URL.Path {
+./lyrics/fetch_test.go-54-		case "/api/search":
+./lyrics/fetch_test.go-55-			w.Header().Set("Content-Type", "application/json")
+./lyrics/fetch_test.go-56-			_, _ = w.Write([]byte(`[{"syncedLyrics":"[00:05.00]Hello","plainLyrics":"Plain text"}]`))
+./lyrics/fetch_test.go-57-		default:
+./lyrics/fetch_test.go-58-			http.NotFound(w, r)
+./lyrics/fetch_test.go-59-		}
+./lyrics/fetch_test.go-60-	}))
+./lyrics/fetch_test.go-61-	defer srv.Close()
+./lyrics/fetch_test.go-62-	installTestClient(t, srv.URL)
+./lyrics/fetch_test.go-63-
+./lyrics/fetch_test.go-64-	lines, err := Fetch("Artist", "Song")
+./lyrics/fetch_test.go-65-	if err != nil {
+./lyrics/fetch_test.go-66-		t.Fatalf("Fetch: %v", err)
+./lyrics/fetch_test.go-67-	}
+./lyrics/fetch_test.go-68-	if len(lines) != 1 {
+./lyrics/fetch_test.go-69-		t.Fatalf("got %d lines, want 1", len(lines))
+./lyrics/fetch_test.go-70-	}
+./lyrics/fetch_test.go-71-	if lines[0].Text != "Hello" {
+--
+./lyrics/lyrics.go-12-	"strings"
+./lyrics/lyrics.go-13-	"time"
+./lyrics/lyrics.go-14-)
+./lyrics/lyrics.go-15-
+./lyrics/lyrics.go-16-// ErrNotFound is returned when no lyrics could be found from any source.
+./lyrics/lyrics.go-17-var ErrNotFound = errors.New("no lyrics found")
+./lyrics/lyrics.go-18-
+./lyrics/lyrics.go-19-// Line represents a single timestamped lyrical line.
+./lyrics/lyrics.go-20-type Line struct {
+./lyrics/lyrics.go-21-	Start time.Duration
+./lyrics/lyrics.go-22-	Text  string
+./lyrics/lyrics.go-23-}
+./lyrics/lyrics.go-24-
+./lyrics/lyrics.go-25-// httpClient is reused across all lyrics API calls.
+./lyrics/lyrics.go-26-var httpClient = &http.Client{Timeout: 10 * time.Second}
+./lyrics/lyrics.go-27-
+./lyrics/lyrics.go-28-// maxResponseBody limits API responses to 2 MB.
+./lyrics/lyrics.go-29-const maxResponseBody = 2 << 20
+./lyrics/lyrics.go-30-
+./lyrics/lyrics.go-31-type lrcResponse struct {
+./lyrics/lyrics.go:32:	SyncedLyrics string `json:"syncedLyrics"`
+./lyrics/lyrics.go-33-	PlainLyrics  string `json:"plainLyrics"`
+./lyrics/lyrics.go-34-}
+./lyrics/lyrics.go-35-
+./lyrics/lyrics.go-36-type ncmSearchResponse struct {
+./lyrics/lyrics.go-37-	Result struct {
+./lyrics/lyrics.go-38-		Songs []struct {
+./lyrics/lyrics.go-39-			Id int `json:"id"`
+./lyrics/lyrics.go-40-		} `json:"songs"`
+./lyrics/lyrics.go-41-	} `json:"result"`
+./lyrics/lyrics.go-42-}
+./lyrics/lyrics.go-43-
+./lyrics/lyrics.go-44-type ncmLyricResponse struct {
+./lyrics/lyrics.go-45-	Lrc struct {
+./lyrics/lyrics.go-46-		Lyric string `json:"lyric"`
+./lyrics/lyrics.go-47-	} `json:"lrc"`
+./lyrics/lyrics.go-48-}
+./lyrics/lyrics.go-49-
+./lyrics/lyrics.go-50-var lrcRegex = regexp.MustCompile(`\[(\d{2,}):(\d{2})\.(\d{2,3})\](.*)`)
+./lyrics/lyrics.go-51-
+./lyrics/lyrics.go-52-// cleanQuery strips noise from a search query: bracketed text like "[Official Video]",
+--
+./lyrics/lyrics.go-143-	if err != nil {
+./lyrics/lyrics.go-144-		return nil, err
+./lyrics/lyrics.go-145-	}
+./lyrics/lyrics.go-146-	defer resp.Body.Close()
+./lyrics/lyrics.go-147-
+./lyrics/lyrics.go-148-	if resp.StatusCode != 200 {
+./lyrics/lyrics.go-149-		return nil, fmt.Errorf("lrclib: %s", resp.Status)
+./lyrics/lyrics.go-150-	}
+./lyrics/lyrics.go-151-
+./lyrics/lyrics.go-152-	var results []lrcResponse
+./lyrics/lyrics.go-153-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(&results); err != nil {
+./lyrics/lyrics.go-154-		return nil, err
+./lyrics/lyrics.go-155-	}
+./lyrics/lyrics.go-156-
+./lyrics/lyrics.go-157-	if len(results) == 0 {
+./lyrics/lyrics.go-158-		return nil, ErrNotFound
+./lyrics/lyrics.go-159-	}
+./lyrics/lyrics.go-160-
+./lyrics/lyrics.go-161-	// Prefer synced lyrics.
+./lyrics/lyrics.go-162-	for _, r := range results {
+./lyrics/lyrics.go:163:		if r.SyncedLyrics != "" {
+./lyrics/lyrics.go:164:			return parseLRC(r.SyncedLyrics), nil
+./lyrics/lyrics.go-165-		}
+./lyrics/lyrics.go-166-	}
+./lyrics/lyrics.go-167-
+./lyrics/lyrics.go-168-	// Fallback to plain lyrics (all lines at timestamp 0).
+./lyrics/lyrics.go-169-	if results[0].PlainLyrics != "" {
+./lyrics/lyrics.go-170-		var lines []Line
+./lyrics/lyrics.go-171-		for raw := range strings.SplitSeq(results[0].PlainLyrics, "\n") {
+./lyrics/lyrics.go-172-			lines = append(lines, Line{Start: 0, Text: strings.TrimSpace(raw)})
+./lyrics/lyrics.go-173-		}
+./lyrics/lyrics.go-174-		return lines, nil
+./lyrics/lyrics.go-175-	}
+./lyrics/lyrics.go-176-
+./lyrics/lyrics.go-177-	return nil, ErrNotFound
+./lyrics/lyrics.go-178-}
+./lyrics/lyrics.go-179-
+./lyrics/lyrics.go-180-func fetchNetEase(query string) ([]Line, error) {
+./lyrics/lyrics.go-181-	data := url.Values{}
+./lyrics/lyrics.go-182-	data.Set("s", query)
+./lyrics/lyrics.go-183-	data.Set("type", "1")
+./lyrics/lyrics.go-184-	data.Set("limit", "1")
+
+==================================================
+FILES CONTAINING EMBEDDED LYRICS SYMBOLS
+==================================================
+./lyrics/lyrics_test.go
+./lyrics/fetch_test.go
+./lyrics/lyrics.go
+./external/local/provider_test.go
+./external/local/provider.go
+./daemon.go
+./ui/model/lyrics_test.go
+./ui/model/commands.go
+./ui/model/inline_overlays.go
+./ui/model/keys.go
+./ui/model/ipc_extended.go
+./ui/model/lyrics.go
+./ui/model/playback_test.go
+./playlist/tags.go
+./playlist/track_test.go
+./playlist/playlist.go
