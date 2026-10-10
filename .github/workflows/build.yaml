@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: build-mpv-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build mpv x86_64
@@ -16,112 +20,109 @@ jobs:
     timeout-minutes: 120
 
     steps:
-      - name: Checkout mpv source
+      - name: Checkout mpv-build
         uses: actions/checkout@v4
         with:
-          repository: mpv-player/mpv
-          fetch-depth: 0
-          submodules: recursive
+          repository: mpv-player/mpv-build
+          ref: master
+          path: mpv-build
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
+
           sudo apt-get install -y \
+            autoconf \
+            automake \
             build-essential \
+            cmake \
             git \
+            ladspa-sdk \
+            libasound2-dev \
+            libass-dev \
+            libbluray-dev \
+            libbs2b-dev \
+            libcdio-paranoia-dev \
+            libdrm-dev \
+            libegl1-mesa-dev \
+            libfontconfig1-dev \
+            libfreetype-dev \
+            libfribidi-dev \
+            libgl-dev \
+            libharfbuzz-dev \
+            libjpeg-dev \
+            liblcms2-dev \
+            liblua5.2-dev \
+            libmujs-dev \
+            libpipewire-0.3-dev \
+            libpulse-dev \
+            librubberband-dev \
+            libuchardet-dev \
+            libunibreak-dev \
+            libva-dev \
+            libvdpau-dev \
+            libvulkan-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxpresent-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxv-dev \
+            libxcb1-dev \
+            libxcb-shm0-dev \
+            libxcb-xfixes0-dev \
+            libxkbcommon-dev \
+            libplacebo-dev \
+            libzimg-dev \
             meson \
+            nasm \
             ninja-build \
             pkg-config \
             python3 \
             python3-pip \
             python3-setuptools \
             python3-wheel \
-            libavcodec-dev \
-            libavdevice-dev \
-            libavfilter-dev \
-            libavformat-dev \
-            libavutil-dev \
-            libswresample-dev \
-            libswscale-dev \
-            libasound2-dev \
-            libpulse-dev \
-            libpipewire-0.3-dev \
-            libplacebo-dev \
-            libass-dev \
-            libbluray-dev \
-            libcdio-paranoia-dev \
-            libdrm-dev \
-            libegl1-mesa-dev \
-            libgbm-dev \
-            libgl1-mesa-dev \
-            libjack-jackd2-dev \
-            libjpeg-dev \
-            liblcms2-dev \
-            liblua5.2-dev \
-            libmujs-dev \
-            libopenal-dev \
-            libuchardet-dev \
-            libva-dev \
-            libvdpau-dev \
-            libvulkan-dev \
-            libx11-dev \
-            libxext-dev \
-            libxinerama-dev \
-            libxkbcommon-dev \
-            libxrandr-dev \
-            libxss-dev \
-            libxv-dev \
-            libwayland-dev \
-            wayland-protocols \
-            libxcb1-dev \
-            libxcb-shm0-dev \
-            libxcb-xfixes0-dev \
-            libxcb-randr0-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xkb-dev \
-            libxpresent-dev \
-            libvdpau-dev \
-            libzimg-dev \
-            libarchive-dev \
-            libuchardet-dev \
-            libunibreak-dev \
-            libv4l-dev \
-            libwebp-dev \
-            libdvdnav-dev \
-            libdvdread-dev
+            yasm \
+            zlib1g-dev
 
-      - name: Configure build
+      - name: Build mpv
+        working-directory: mpv-build
         run: |
-          meson setup build \
-            --prefix=/usr/local \
-            --buildtype=release \
-            -Dlibmpv=true \
-            -Dtests=false
+          ./rebuild -j2
 
-      - name: Compile mpv
+      - name: Verify binary
+        working-directory: mpv-build
         run: |
-          meson compile -C build
+          test -x mpv/build/mpv
 
-      - name: Stage binaries
+          file mpv/build/mpv
+          mpv/build/mpv --version
+
+          mkdir -p ../artifact
+
+          cp mpv/build/mpv ../artifact/mpv
+          strip ../artifact/mpv || true
+
+          ldd ../artifact/mpv \
+            > ../artifact/shared-libraries.txt || true
+
+          ../artifact/mpv --version \
+            > ../artifact/version.txt
+
+          printf '%s\n' \
+            "Target: Ubuntu 24.04 AMD64" \
+            "Architecture: x86_64" \
+            "Source: mpv-player/mpv-build" \
+            > ../artifact/build-info.txt
+
+      - name: Package artifact
         run: |
-          mkdir -p artifact
-          cp build/mpv artifact/mpv
-          strip artifact/mpv || true
+          tar -czf mpv-ubuntu-amd64.tar.gz \
+            -C artifact .
 
-          ldd artifact/mpv > artifact/shared-libraries.txt || true
-
-          {
-            echo "mpv version:"
-            artifact/mpv --version
-            echo
-            echo "Architecture:"
-            uname -m
-          } > artifact/build-info.txt
-
-          tar -czf mpv-ubuntu-amd64.tar.gz -C artifact .
-
-      - name: Upload build artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: mpv-ubuntu-amd64
