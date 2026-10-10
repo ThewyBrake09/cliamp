@@ -1,125 +1,130 @@
-name: Build cliamp ARM64
+name: Build mpv (Ubuntu AMD64)
 
 on:
   workflow_dispatch:
-    inputs:
-      cliamp_ref:
-        description: "Test"
-        required: true
-        default: main
+  push:
+    tags:
+      - "mpv-v*"
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build mpv x86_64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
 
     steps:
-      - name: Checkout cliamp
+      - name: Checkout mpv source
         uses: actions/checkout@v4
         with:
-          repository: ThewyBrake09/cliamp-termux
-          ref: ${{ github.event.inputs.cliamp_ref }}
-          path: cliamp
+          repository: mpv-player/mpv
+          fetch-depth: 0
+          submodules: recursive
 
-      - name: Verify source repository
-        working-directory: cliamp
+      - name: Install build dependencies
         run: |
-          echo "=== SOURCE REPOSITORY ==="
-          git remote -v
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            meson \
+            ninja-build \
+            pkg-config \
+            python3 \
+            python3-pip \
+            python3-setuptools \
+            python3-wheel \
+            libavcodec-dev \
+            libavdevice-dev \
+            libavfilter-dev \
+            libavformat-dev \
+            libavutil-dev \
+            libswresample-dev \
+            libswscale-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libpipewire-0.3-dev \
+            libplacebo-dev \
+            libass-dev \
+            libbluray-dev \
+            libcdio-paranoia-dev \
+            libdrm-dev \
+            libegl1-mesa-dev \
+            libgbm-dev \
+            libgl1-mesa-dev \
+            libjack-jackd2-dev \
+            libjpeg-dev \
+            liblcms2-dev \
+            liblua5.2-dev \
+            libmujs-dev \
+            libopenal-dev \
+            libuchardet-dev \
+            libva-dev \
+            libvdpau-dev \
+            libvulkan-dev \
+            libx11-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxv-dev \
+            libwayland-dev \
+            wayland-protocols \
+            libxcb1-dev \
+            libxcb-shm0-dev \
+            libxcb-xfixes0-dev \
+            libxcb-randr0-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xkb-dev \
+            libxpresent-dev \
+            libxvdpau-dev \
+            libzimg-dev \
+            libarchive-dev \
+            libuchardet-dev \
+            libunibreak-dev \
+            libv4l-dev \
+            libwebp-dev \
+            libdvdnav-dev \
+            libdvdread-dev
 
-          echo
-          echo "=== SOURCE REVISION ==="
-          git log -1 --oneline
-          git rev-parse HEAD
-
-      - name: Build cliamp ARM64 with CGO
+      - name: Configure build
         run: |
-          docker run --rm \
-            -v "${{ github.workspace }}/cliamp:/src" \
-            -w /src \
-            golang:1.25-trixie \
-            bash -c '
-              set -eux
+          meson setup build \
+            --prefix=/usr/local \
+            --buildtype=release \
+            -Dlibmpv=true \
+            -Dtests=false
 
-              echo "=== HOST ==="
-              uname -m
-
-              echo
-              echo "=== ENABLE ARM64 PACKAGE ARCHITECTURE ==="
-              dpkg --add-architecture arm64
-
-              echo
-              echo "=== UPDATE PACKAGE INDEX ==="
-              apt-get update
-
-              echo
-              echo "=== INSTALL ARM64 CROSS TOOLCHAIN ==="
-              apt-get install -y --no-install-recommends \
-                gcc-aarch64-linux-gnu \
-                g++-aarch64-linux-gnu \
-                libc6-dev-arm64-cross \
-                pkg-config
-
-              echo
-              echo "=== INSTALL ARM64 AUDIO DEVELOPMENT LIBRARIES ==="
-              apt-get install -y --no-install-recommends \
-                libasound2-dev:arm64 \
-                libflac-dev:arm64 \
-                libvorbis-dev:arm64 \
-                libogg-dev:arm64 \
-                libmpg123-dev:arm64
-
-              echo
-              echo "=== CROSS COMPILER ==="
-              aarch64-linux-gnu-gcc --version
-
-              echo
-              echo "=== ARM64 LIBRARIES ==="
-              dpkg-query -W \
-                libasound2-dev:arm64 \
-                libflac-dev:arm64 \
-                libvorbis-dev:arm64 \
-                libogg-dev:arm64 \
-                libmpg123-dev:arm64
-
-              echo
-              echo "=== BUILD ARM64 ==="
-
-              export GOTOOLCHAIN=auto
-              export CGO_ENABLED=1
-              export GOOS=linux
-              export GOARCH=arm64
-              export CC=aarch64-linux-gnu-gcc
-              export CXX=aarch64-linux-gnu-g++
-
-              export PKG_CONFIG_LIBDIR="/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
-              export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig"
-
-              go env GOOS GOARCH CGO_ENABLED CC CXX
-
-              go build \
-                -buildvcs=false \
-                -trimpath \
-                -ldflags="-s -w" \
-                -o cliamp-linux-arm64-with-spotify .
-
-              echo
-              echo "=== BUILD COMPLETE ==="
-              ls -lh cliamp-linux-arm64-with-spotify
-              sha256sum cliamp-linux-arm64-with-spotify
-            '
-
-      - name: Verify ARM64 binary
-        working-directory: cliamp
+      - name: Compile mpv
         run: |
-          echo "=== SIZE ==="
-          ls -lh cliamp-linux-arm64-with-spotify
+          meson compile -C build
 
-          echo
-          echo "=== SHA256 ==="
-          sha256sum cliamp-linux-arm64-with-spotify
+      - name: Stage binaries
+        run: |
+          mkdir -p artifact
+          cp build/mpv artifact/mpv
+          strip artifact/mpv || true
 
-      - name: Upload ARM64 binary
+          ldd artifact/mpv > artifact/shared-libraries.txt || true
+
+          {
+            echo "mpv version:"
+            artifact/mpv --version
+            echo
+            echo "Architecture:"
+            uname -m
+          } > artifact/build-info.txt
+
+          tar -czf mpv-ubuntu-amd64.tar.gz -C artifact .
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cliamp-linux-arm64-with-spotify
-          path: cliamp/cliamp-linux-arm64-with-spotify
+          name: mpv-ubuntu-amd64
+          path: mpv-ubuntu-amd64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
