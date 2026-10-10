@@ -81,7 +81,7 @@ jobs:
             libxcb-shape0-dev \
             libxcb-xkb-dev \
             libxpresent-dev \
-            libxvdpau-dev \
+            libvdpau-dev \
             libzimg-dev \
             libarchive-dev \
             libuchardet-dev \
